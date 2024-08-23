@@ -1,0 +1,4 @@
+set(CMAKE_C_COMPILER ${ZIG} cc)
+set(CMAKE_CXX_COMPILER ${ZIG} c++)
+set(CMAKE_C_COMPILER_ID ${ZIG} cc)
+set(CMAKE_CXX_COMPILER_ID ${ZIG} c++) 
