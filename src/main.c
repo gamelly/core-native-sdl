@@ -1,4 +1,5 @@
 #include "zeebo_engine.h"
+#include "engine/native.h"
 
 bool running = false;
 
