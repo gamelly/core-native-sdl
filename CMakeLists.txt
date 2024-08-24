@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CROSSCOMPILING TRUE)
 set(CMAKE_SYSTEM_NAME "GNU")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/dist")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/toolchain.cmake")
 include_directories("${CMAKE_SOURCE_DIR}/vendor")
 
@@ -33,14 +33,14 @@ find_program(ZIG zig PATHS "${CMAKE_SOURCE_DIR}/vendor/zig" REQUIRED)
 set(SDL2_STATIC ON)
 set(SDL2_SHARED OFF)
 FetchContent_Declare(
-    sdl2
+    lib_sdl2
     GIT_REPOSITORY https://github.com/libsdl-org/SDL
     GIT_TAG release-2.30.6
     SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL"
     SUBBUILD_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/sdl2-subbuild"
     BINARY_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/sdl2-build"
 )
-FetchContent_MakeAvailable(sdl2)
+FetchContent_MakeAvailable(lib_sdl2)
 
 # Lua
 FetchContent_Declare(
@@ -64,8 +64,8 @@ else()
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
     )
 endif()
-add_library(lua STATIC IMPORTED)
-set_target_properties(lua PROPERTIES
+add_library(lua-static STATIC IMPORTED)
+set_target_properties(lua-static PROPERTIES
     IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/lua/liblua.a"
 )
 FetchContent_MakeAvailable(lib_lua)
@@ -82,5 +82,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(lib_engine)
 
 add_executable(engine "src/main.c")
-target_link_libraries(engine PRIVATE lua)
-target_link_libraries(engine PRIVATE SDL2::SDL2)
+target_link_libraries(engine PRIVATE lua-static)
+target_link_libraries(engine PRIVATE SDL2::SDL2-static)
+target_compile_options(engine PRIVATE -static)
