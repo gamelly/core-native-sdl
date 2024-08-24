@@ -32,6 +32,8 @@ find_program(ZIG zig PATHS "${CMAKE_SOURCE_DIR}/vendor/zig" REQUIRED)
 # SDL
 set(SDL2_STATIC ON)
 set(SDL2_SHARED OFF)
+set(BUILD_SHARED_LIBS OFF)
+set(SDL2TTF_SAMPLES OFF)
 FetchContent_Declare(
     lib_sdl2
     GIT_REPOSITORY https://github.com/libsdl-org/SDL
@@ -41,6 +43,15 @@ FetchContent_Declare(
     BINARY_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/sdl2-build"
 )
 FetchContent_MakeAvailable(lib_sdl2)
+FetchContent_Declare(
+    lib_sdl2_ttf
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf
+    GIT_TAG release-2.22.0
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL_ttf"
+    SUBBUILD_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/sdl2-ttf-subbuild"
+    BINARY_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/sdl2-ttf-build"
+)
+FetchContent_MakeAvailable(lib_sdl2_ttf)
 
 # Lua
 FetchContent_Declare(
@@ -51,6 +62,7 @@ FetchContent_Declare(
     SUBBUILD_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/lua-subbuild"
     BINARY_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/lua-build"
 )
+FetchContent_MakeAvailable(lib_lua)
 file(WRITE "${CMAKE_SOURCE_DIR}/vendor/lua/zig" "#!/bin/sh\n../zig/zig cc $*\n")
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
     message(FATAL_ERROR "windows is not implemeted!")
@@ -68,7 +80,6 @@ add_library(lua-static STATIC IMPORTED)
 set_target_properties(lua-static PROPERTIES
     IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/lua/liblua.a"
 )
-FetchContent_MakeAvailable(lib_lua)
 
 # Engine
 FetchContent_Declare(
@@ -85,4 +96,5 @@ FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*.c")
 add_executable(engine "${engine_files}")
 target_link_libraries(engine PRIVATE lua-static)
 target_link_libraries(engine PRIVATE SDL2::SDL2-static)
+target_link_libraries(engine PRIVATE SDL2_ttf::SDL2_ttf-static)
 target_compile_options(engine PRIVATE -static)
