@@ -1,20 +1,15 @@
-#include <stdio.h>
-#include <stdbool.h>
-
-#include "lua/lua.h"
-#include "lua/lualib.h"
-#include "lua/lauxlib.h"
-#include "SDL/include/SDL.h"
+#include "zeebo_engine.h"
 
 lua_State *L;
 SDL_Window* window;
 SDL_Renderer* renderer;
 
 int main(int argc, char* argv[]) {
+    int i;
     int status = 1;
     bool running = false;
     const int wpos = SDL_WINDOWPOS_UNDEFINED;
-    const char *lua_script = "print('Hello, World!')";
+    const char *lua_script = "print('Hello, World!')\nfunction native_callback_draw()\nnative_draw_rect(0, 100, 200, 250, 250)\nend";
 
     do {
         L = luaL_newstate();
@@ -25,6 +20,11 @@ int main(int argc, char* argv[]) {
         }
 
         luaL_openlibs(L);
+        
+        for(i = 0; i < zeebo_drawlib_size; i++) {
+            lua_pushcfunction(L, zeebo_drawlib_list[i].func);
+            lua_setglobal(L, zeebo_drawlib_list[i].name);
+        }
 
         if (luaL_dostring(L, lua_script) != LUA_OK) {
             fprintf(stderr, "Lua error: %s\n", lua_tostring(L, -1));
@@ -61,6 +61,11 @@ int main(int argc, char* argv[]) {
 
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
+
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+            lua_getglobal(L, "native_callback_draw");
+            lua_pcall(L, 0, 0, 0);
 
             SDL_RenderPresent(renderer);
 

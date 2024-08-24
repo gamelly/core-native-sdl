@@ -81,7 +81,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(lib_engine)
 
-add_executable(engine "src/main.c")
+FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*.c")
+add_executable(engine "${engine_files}")
 target_link_libraries(engine PRIVATE lua-static)
 target_link_libraries(engine PRIVATE SDL2::SDL2-static)
 target_compile_options(engine PRIVATE -static)
