@@ -66,9 +66,11 @@ static int native_draw_font(lua_State *L) {
 
     if (argc == 1) {
         font_size = luaL_checkinteger(L, 1);
+        lua_pop(L, 1);
     } else if (argc == 2) {
         font_name = luaL_checkstring(L, 1);
         font_size = luaL_checkinteger(L, 2);
+        lua_pop(L, 2);
     } else {
         assert(false);
     }
@@ -105,8 +107,6 @@ static int native_draw_font(lua_State *L) {
         }
     }
     while(0);
-
-    lua_pop(L, 2);
 
     return 0;
 }
