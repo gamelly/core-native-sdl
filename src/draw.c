@@ -2,7 +2,6 @@
 #include "tiresias/font.h"
 
 static TTF_Font* font = NULL;
-static char *current_font_name = NULL;
 static SDL_Color color = {255, 255, 255, 255};
 
 static int native_draw_start(lua_State *L) {
@@ -105,6 +104,8 @@ static int native_draw_font(lua_State *L) {
     const char* font_name = NULL;
     int font_size = 0;
     static SDL_RWops* rw = NULL;
+    static char *current_font_name = NULL;
+    static char *failed_font_name = NULL;
 
     if (argc == 1) {
         font_size = luaL_checkinteger(L, 1);
@@ -114,7 +115,7 @@ static int native_draw_font(lua_State *L) {
         font_size = luaL_checkinteger(L, 2);
         lua_pop(L, 2);
     } else {
-        assert(false);
+        luaL_error(L, "wrong number of args");
     }
 
     if (font && current_font_name != NULL && current_font_name != font_name) {
@@ -122,19 +123,29 @@ static int native_draw_font(lua_State *L) {
     }
 
     do {
-        if (font_name == current_font_name) {
+        if (font_size == 0) {
             break;
         }
         
+        if (font_name == current_font_name) {
+            break;
+        }
+
         if (font_name != NULL) {
-            font = TTF_OpenFont(font_name, font_size);
+            TTF_Font* font_new = TTF_OpenFont(font_name, font_size);
         
-            if (font) {
+            if (font_new) {
+                font = font_new;
                 current_font_name = font_name;
                 break;
+            } else if (failed_font_name != font_name) {
+                fprintf(stderr, "Failed to load font: %s\n", TTF_GetError());
+                failed_font_name = font_name;
             }
+        }
 
-            fprintf(stderr, "Failed to load default font: %s\n", TTF_GetError());
+        if (font != NULL && current_font_name == NULL) {
+            break;
         }
 
         if (rw == NULL) {
