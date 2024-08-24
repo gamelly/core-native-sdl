@@ -1,4 +1,5 @@
 #include "zeebo_engine.h"
+#include "tiresias/font.h"
 
 static TTF_Font* font = NULL;
 static SDL_Color color = {255, 255, 255, 255};
@@ -58,20 +59,52 @@ static int native_draw_line(lua_State *L) {
  * @param[in] size @c double
  */
 static int native_draw_font(lua_State *L) {
-    assert(lua_gettop(L) == 2);
+    int argc = lua_gettop(L);
+    const char* font_name = NULL;
+    int font_size = 0;
+    static SDL_RWops* rw = NULL;
 
-    const char* font_name = luaL_checkstring(L, 1);
-    int size = luaL_checkinteger(L, 2);
+    if (argc == 1) {
+        font_size = luaL_checkinteger(L, 1);
+    } else if (argc == 2) {
+        font_name = luaL_checkstring(L, 1);
+        font_size = luaL_checkinteger(L, 2);
+    } else {
+        assert(false);
+    }
 
     if (font) {
         TTF_CloseFont(font);
     }
 
-    font = TTF_OpenFont("/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf", size);
-    
-    if (font == NULL) {
-        fprintf(stderr, "Failed to load default font: %s\n", TTF_GetError());
+    do {
+        if (font_name != NULL) {
+            font = TTF_OpenFont(font_name, font_size);
+        
+            if (font) {
+                break;
+            }
+
+            fprintf(stderr, "Failed to load default font: %s\n", TTF_GetError());
+        }
+
+        if (rw == NULL) {
+            rw = SDL_RWFromConstMem(Tiresias_ttf, Tiresias_ttf_len);
+        }
+
+        if (rw == NULL) {
+            fprintf(stderr, "Failed to create SDL_RWops from memory: %s\n", SDL_GetError());
+            break;
+        }
+
+        font = TTF_OpenFontRW(rw, 1, font_size);
+
+        if (font == NULL) {
+            fprintf(stderr, "Failed to load font from memory: %s\n", TTF_GetError());
+            break;
+        }
     }
+    while(0);
 
     lua_pop(L, 2);
 

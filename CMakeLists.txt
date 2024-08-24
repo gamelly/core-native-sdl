@@ -29,6 +29,26 @@ FetchContent_Populate(
 )
 find_program(ZIG zig PATHS "${CMAKE_SOURCE_DIR}/vendor/zig" REQUIRED)
 
+# Font
+set(TIRESIAS_FONT_URL "https://github.com/jgrande/ginga/raw/master/tool/ginga/fonts/Tiresias.ttf")
+set(TIRESIAS_FONT_PATH "${CMAKE_SOURCE_DIR}/vendor/tiresias/Tiresias.ttf")
+set(TIRESIAS_HEADER_PATH "${CMAKE_SOURCE_DIR}/vendor/tiresias/font.h")
+if(NOT EXISTS ${TIRESIAS_HEADER_PATH})
+    file(DOWNLOAD ${TIRESIAS_FONT_URL} ${TIRESIAS_FONT_PATH} SHOW_PROGRESS)
+    execute_process(
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/tiresias"
+        COMMAND xxd -i Tiresias.ttf
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+    )
+    if(result EQUAL 0)
+        file(WRITE ${TIRESIAS_HEADER_PATH} "${output}")
+    else()
+        message(FATAL_ERROR "Failed to execute xxd: ${error}")
+    endif()
+endif()
+
 # SDL
 set(SDL2_STATIC ON)
 set(SDL2_SHARED OFF)

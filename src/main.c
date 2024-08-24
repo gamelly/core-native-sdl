@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        if (luaL_dostring(L, "native_draw_font('ubuntu.ttf', 18)") != LUA_OK) {
+        if (luaL_dostring(L, "native_draw_font(18)") != LUA_OK) {
             fprintf(stderr, "Lua error: %s\n", lua_tostring(L, -1));
             break;
         }
