@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <unistd.h>
 
 #include "lua/lua.h"
 #include "lua/lualib.h"

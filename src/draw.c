@@ -2,7 +2,49 @@
 #include "tiresias/font.h"
 
 static TTF_Font* font = NULL;
+static char *current_font_name = NULL;
 static SDL_Color color = {255, 255, 255, 255};
+
+static int native_draw_start(lua_State *L) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+}
+
+static int native_draw_flush(lua_State *L) {
+    SDL_RenderPresent(renderer);
+}
+
+/**
+ * @param[in] h @c double color
+ */
+static int native_draw_clear(lua_State *L) {
+    assert(lua_gettop(L) == 1);
+
+    int color = luaL_checknumber(L, 1);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+    SDL_FRect rect = {0, 0, 680, 420};
+
+    SDL_RenderFillRectF(renderer, &rect);
+
+    lua_pop(L, 1);
+
+    return 0;
+}
+
+/**
+ * @param[in] h @c double color
+ */
+static int native_draw_color(lua_State *L) {
+    assert(lua_gettop(L) == 1);
+
+    int color = luaL_checknumber(L, 1);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    
+    lua_pop(L, 1);
+
+    return 0;
+}
 
 /**
  * @param[in] mode @c int 0 fill, 1 frame
@@ -75,15 +117,20 @@ static int native_draw_font(lua_State *L) {
         assert(false);
     }
 
-    if (font) {
+    if (font && current_font_name != NULL && current_font_name != font_name) {
         TTF_CloseFont(font);
     }
 
     do {
+        if (font_name == current_font_name) {
+            break;
+        }
+        
         if (font_name != NULL) {
             font = TTF_OpenFont(font_name, font_size);
         
             if (font) {
+                current_font_name = font_name;
                 break;
             }
 
@@ -172,6 +219,10 @@ static int native_draw_text(lua_State *L) {
 }
 
 static const luaL_Reg zeebo_drawlib[] = {
+    {"native_draw_start", native_draw_start},
+    {"native_draw_flush", native_draw_flush},
+    {"native_draw_clear", native_draw_clear},
+    {"native_draw_color", native_draw_color},
     {"native_draw_rect", native_draw_rect},
     {"native_draw_line", native_draw_line},
     {"native_draw_font", native_draw_font},
