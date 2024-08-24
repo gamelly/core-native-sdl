@@ -168,7 +168,7 @@ static int native_draw_text(lua_State *L) {
     lua_pushinteger(L, textWidth);
     lua_pushinteger(L, textHeight);
     
-    return 0;
+    return 2;
 }
 
 static const luaL_Reg zeebo_drawlib[] = {
