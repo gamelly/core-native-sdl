@@ -1,24 +1,40 @@
 #include "zeebo_engine.h"
+#include "engine/native.h"
 
-bool running = false;
+//! @cond
+char *engine_file_name = NULL; 
+char *game_file_name = "game.lua";
+FILE *file_ptr = NULL;
+char *file_buf = NULL;
+size_t file_len = 0;
 
 lua_State *L;
 SDL_Window* window;
 SDL_Renderer* renderer;
+//! @endcond
 
 int main(int argc, char* argv[]) {
     int i;
+    int opt;
     int status = 1;
-    bool should_close = false;
     const int wpos = SDL_WINDOWPOS_UNDEFINED;
-    const char *lua_script = "print('Hello, World!')\n"
-      "function native_callback_draw()\n"
-      "native_draw_rect(0, 100, 200, 250, 250)\n"
-      "native_draw_text(8, 8, 'helo!')\nend";
+
+#ifndef NOT_USE_GETOPT
+    while ((opt = getopt(argc, argv, "g:e:")) != -1) {
+        switch (opt) {
+            case 'g':
+                game_file_name = optarg;
+                break;
+            case 'e':
+                engine_file_name = optarg;
+                break;
+        }
+    }
+#endif
 
     do {
         L = luaL_newstate();
-
+        
         if (L == NULL) {
             fprintf(stderr, "Cannot create Lua state\n");
             break;
@@ -31,8 +47,65 @@ int main(int argc, char* argv[]) {
             lua_setglobal(L, zeebo_drawlib_list[i].name);
         }
 
-        if (luaL_dostring(L, lua_script) != LUA_OK) {
-            fprintf(stderr, "Lua error: %s\n", lua_tostring(L, -1));
+        if (engine_file_name == NULL) {
+            if (luaL_loadbuffer(L, main_lua, main_lua_len, "") != LUA_OK || lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                fprintf(stderr, "Lua Engine error: %s\n", lua_tostring(L, -1));
+                break;
+            }
+        } else {
+            file_ptr = fopen(engine_file_name, "r");
+
+            if (file_ptr == NULL) {
+                fprintf(stderr, "Cannot open engine file: %s\n", engine_file_name);
+                break;
+            }
+
+            do {
+                file_buf = realloc(file_buf, file_len + 4096);
+                file_len += fread(file_buf + file_len, 1, 4096, file_ptr);
+            }
+            while(!feof(file_ptr));
+
+            if (luaL_dostring(L, file_buf) != LUA_OK) {
+                fprintf(stderr, "Lua Game syntax error: %s\n", lua_tostring(L, -1));
+                break;
+            }
+
+            fclose(file_ptr);
+            free(file_buf);
+            file_buf = NULL;
+            file_len = 0;
+        }
+
+        file_ptr = fopen(game_file_name, "r");
+
+        if (file_ptr == NULL) {
+            fprintf(stderr, "Cannot open game file: %s\n", game_file_name);
+            break;
+        }
+
+        do {
+            file_buf = realloc(file_buf, file_len + 4096);
+            file_len += fread(file_buf + file_len, 1, 4096, file_ptr);
+        }
+        while(!feof(file_ptr));
+
+        if (luaL_dostring(L, file_buf) != LUA_OK) {
+            fprintf(stderr, "Lua Game syntax error: %s\n", lua_tostring(L, -1));
+            break;
+        }
+        lua_pop(L, 1);
+
+        lua_getglobal(L, "native_callback_init");
+        lua_pushnumber(L, 640);
+        lua_pushnumber(L, 480);
+        lua_pushstring(L, file_buf);
+
+        fclose(file_ptr);
+        free(file_buf);
+
+        if (lua_pcall(L, 3, 0, 0) != LUA_OK) {
+            fprintf(stderr, "Lua Game loading error: %s\n", lua_tostring(L, -1));
             break;
         }
 
@@ -64,25 +137,37 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        SDL_Event event;
         status = 0;
-        running = true;
-        while (running && !should_close) {
+        SDL_Event event;
+        bool running = true;
+        while (running) {
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT) {
-                    should_close = true;
+                    running = false;
+                }
+                else if (event.type == SDL_KEYDOWN) {
+                    native_keyboard_keydown(L, event.key.keysym.sym);
+                }
+                else if (event.type == SDL_KEYUP) {
+                    native_keyboard_keyup(L, event.key.keysym.sym);
                 }
             }
+            status = 1;
 
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            SDL_RenderClear(renderer);
-
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            lua_getglobal(L, "native_callback_loop");
+            lua_pushnumber(L, SDL_GetTicks());
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+                fprintf(stderr, "Lua Game loop error: %s\n", lua_tostring(L, -1));
+                break;
+            }
 
             lua_getglobal(L, "native_callback_draw");
-            lua_pcall(L, 0, 0, 0);
+            if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                fprintf(stderr, "Lua Game draw error: %s\n", lua_tostring(L, -1));
+                break;
+            }
 
-            SDL_RenderPresent(renderer);
+            status = 0;
 
             SDL_Delay(16);
         }
@@ -100,5 +185,5 @@ int main(int argc, char* argv[]) {
     }
 
     SDL_Quit();
-    return 0;
+    return status;
 }

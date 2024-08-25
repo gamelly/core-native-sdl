@@ -18,6 +18,7 @@ if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Darwin")
 elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set(ZIG_DOWNLOAD "${ZIG_DOWNLOAD}/${ZIG_VERSION}/zig-linux-${CMAKE_HOST_SYSTEM_PROCESSOR}-${ZIG_VERSION}.tar.xz")
 elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
+    add_compile_options("-DNOT_USE_GETOPT")
     set(ZIG_DOWNLOAD "${ZIG_DOWNLOAD}/${ZIG_VERSION}/zig-windows-${CMAKE_HOST_SYSTEM_PROCESSOR}-${ZIG_VERSION}.zip")
 endif()
 FetchContent_Populate(
@@ -83,16 +84,9 @@ FetchContent_Declare(
     BINARY_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/lua-build"
 )
 FetchContent_MakeAvailable(lib_lua)
-file(WRITE "${CMAKE_SOURCE_DIR}/vendor/lua/zig" "#!/bin/sh\n../zig/zig cc $*\n")
-if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
-    message(FATAL_ERROR "windows is not implemeted!")
-else()
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
     execute_process(
-        COMMAND chmod +x zig
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
-    )
-    execute_process(
-        COMMAND make CC=./zig
+        COMMAND make CC=./zig MYCFLAGS="-std=c99"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
     )
 endif()
@@ -105,12 +99,31 @@ set_target_properties(lua-static PROPERTIES
 FetchContent_Declare(
     lib_engine
     GIT_REPOSITORY https://github.com/RodrigoDornelles/codename-videogame-engine
-    GIT_TAG main
+    GIT_TAG develop
     SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/engine"
     SUBBUILD_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/engine-subbuild"
     BINARY_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/engine-build"
 )
 FetchContent_MakeAvailable(lib_engine)
+set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/native.h")
+if(NOT EXISTS ${ENGINE_HEADER})
+    execute_process(
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
+        COMMAND ${CMAKE_SOURCE_DIR}/vendor/lua/lua src/cli/main.lua build --core native --bundler
+    )
+    execute_process(
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine/dist"
+        COMMAND  xxd -i main.lua
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+    )
+    if(result EQUAL 0)
+        file(WRITE ${ENGINE_HEADER} "${output}")
+    else()
+        message(FATAL_ERROR "Failed to execute xxd: ${error}")
+    endif()
+endif()
 
 FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*.c")
 add_executable(engine "${engine_files}")
