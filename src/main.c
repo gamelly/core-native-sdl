@@ -46,11 +46,11 @@ int main(int argc, char* argv[]) {
         }
 
         if (engine_file_name == NULL) {
-            ///! TODO: not working  
-            if (luaL_loadbuffer(L, main_lua, main_lua_len, "engine") != LUA_OK) {
+            if (luaL_loadbuffer(L, main_lua, main_lua_len, "") != LUA_OK || lua_pcall(L, 0, 0, 0) != LUA_OK) {
                 fprintf(stderr, "Lua Engine error: %s\n", lua_tostring(L, -1));
                 break;
             }
+
         } else {
             file_ptr = fopen(engine_file_name, "r");
 
