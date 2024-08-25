@@ -141,6 +141,12 @@ int main(int argc, char* argv[]) {
                 if (event.type == SDL_QUIT) {
                     running = false;
                 }
+                else if (event.type == SDL_KEYDOWN) {
+                    native_keyboard_keydown(L, event.key.keysym.sym);
+                }
+                else if (event.type == SDL_KEYUP) {
+                    native_keyboard_keyup(L, event.key.keysym.sym);
+                }
             }
             status = 1;
 

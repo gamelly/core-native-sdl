@@ -98,7 +98,7 @@ static int native_draw_line(lua_State *L) {
     float x2 = luaL_checknumber(L, 3);
     float y2 = luaL_checknumber(L, 4);
     
-    SDL_RenderDrawLineF(renderer, x1, y1, y2, y2);
+    SDL_RenderDrawLineF(renderer, x1, y1, x2, y2);
 
     lua_pop(L, 4);
 

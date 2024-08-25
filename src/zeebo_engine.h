@@ -10,9 +10,12 @@
 #include "SDL/include/SDL.h"
 #include "SDL_ttf/SDL_ttf.h"
 
+
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
 
 extern const luaL_Reg *const zeebo_drawlib_list;
 extern const int zeebo_drawlib_size;
 
+void native_keyboard_keydown(lua_State *L, SDL_Keycode key);
+void native_keyboard_keyup(lua_State *L, SDL_Keycode key);
