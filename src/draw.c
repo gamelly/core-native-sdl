@@ -193,10 +193,12 @@ static int native_draw_text(lua_State *L) {
     const char* text = NULL;
     if (argc == 1) {
         text = luaL_checkstring(L, 1);
+        lua_pop(L, 1);
     } else if(argc == 3) {
         x = (int) luaL_checknumber(L, 1);
         y = (int) luaL_checknumber(L, 2);
         text = luaL_checkstring(L, 3);
+        lua_pop(L, 3);
     } 
    
     int result = 0;
@@ -243,8 +245,6 @@ static int native_draw_text(lua_State *L) {
     if (textTexture) {
         SDL_DestroyTexture(textTexture);
     }
-
-    lua_pop(L, 3);
     
     if (result == 2) {
         lua_pushinteger(L, textWidth);
