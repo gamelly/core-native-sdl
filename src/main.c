@@ -1,6 +1,7 @@
 #include "zeebo_engine.h"
 #include "engine/native.h"
 
+//! @cond
 char *engine_file_name = NULL; 
 char *game_file_name = "game.lua";
 FILE *file_ptr = NULL;
@@ -10,6 +11,7 @@ size_t file_len = 0;
 lua_State *L;
 SDL_Window* window;
 SDL_Renderer* renderer;
+//! @endcond
 
 int main(int argc, char* argv[]) {
     int i;

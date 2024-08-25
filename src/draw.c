@@ -1,8 +1,10 @@
 #include "zeebo_engine.h"
 #include "tiresias/font.h"
 
+//! @cond
 static TTF_Font* font = NULL;
-static SDL_Color color = {255, 255, 255, 255};
+static SDL_Color current_color = {255, 255, 255, 255};
+//! @endcond
 
 static int native_draw_start(lua_State *L) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -14,7 +16,8 @@ static int native_draw_flush(lua_State *L) {
 }
 
 /**
- * @param[in] h @c double color
+ * @short @c std.draw.clear
+ * @param[in] color @c int
  */
 static int native_draw_clear(lua_State *L) {
     assert(lua_gettop(L) == 1);
@@ -37,18 +40,19 @@ static int native_draw_clear(lua_State *L) {
 }
 
 /**
- * @param[in] h @c double color
+ * @short @c std.draw.color
+ * @param[in] color @c int
  */
 static int native_draw_color(lua_State *L) {
     assert(lua_gettop(L) == 1);
 
     int color_new = luaL_checkinteger(L, 1);
-    color.r = (color_new >> 24) & 0xFF;
-    color.g = (color_new >> 16) & 0xFF;
-    color.b = (color_new >> 8) & 0xFF;
-    color.a = (color_new) & 0xFF;
+    current_color.r = (color_new >> 24) & 0xFF;
+    current_color.g = (color_new >> 16) & 0xFF;
+    current_color.b = (color_new >> 8) & 0xFF;
+    current_color.a = (color_new) & 0xFF;
 
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_SetRenderDrawColor(renderer, current_color.r, current_color.g, current_color.b, current_color.a);
     
     lua_pop(L, 1);
 
@@ -56,6 +60,7 @@ static int native_draw_color(lua_State *L) {
 }
 
 /**
+ * @short @c std.draw.rect
  * @param[in] mode @c int 0 fill, 1 frame
  * @param[in] x @c double pos X
  * @param[in] y @c double pos Y
@@ -85,6 +90,7 @@ static int native_draw_rect(lua_State *L) {
 }
 
 /**
+ * @short @c std.draw.line
  * @param[in] x1 @c double
  * @param[in] y1 @c double
  * @param[in] x2 @c double
@@ -106,6 +112,7 @@ static int native_draw_line(lua_State *L) {
 }
 
 /**
+ * @short @c std.draw.font
  * @param[in] font @c string
  * @param[in] size @c double
  */
@@ -183,6 +190,7 @@ static int native_draw_font(lua_State *L) {
 }
 
 /**
+ * @short @c std.draw.text
  * @param[in] x @c double
  * @param[in] y @c double
  * @param[in] text @c string
@@ -216,7 +224,7 @@ static int native_draw_text(lua_State *L) {
             break;
         }
 
-        textSurface = TTF_RenderText_Solid(font, text, color);
+        textSurface = TTF_RenderText_Solid(font, text, current_color);
         if (textSurface == NULL) {
             fprintf(stderr, "Failed to create text surface: %s\n", TTF_GetError());
             break;
@@ -256,6 +264,7 @@ static int native_draw_text(lua_State *L) {
     return result;
 }
 
+//! @cond
 static const luaL_Reg zeebo_drawlib[] = {
     {"native_draw_start", native_draw_start},
     {"native_draw_flush", native_draw_flush},
@@ -269,3 +278,4 @@ static const luaL_Reg zeebo_drawlib[] = {
 
 const luaL_Reg *const zeebo_drawlib_list = zeebo_drawlib;
 const int zeebo_drawlib_size = sizeof(zeebo_drawlib)/sizeof(luaL_Reg);
+//! @endcond
