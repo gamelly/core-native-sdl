@@ -19,8 +19,13 @@ static int native_draw_flush(lua_State *L) {
 static int native_draw_clear(lua_State *L) {
     assert(lua_gettop(L) == 1);
 
-    int color = luaL_checknumber(L, 1);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    int color_new = luaL_checkinteger(L, 1);
+    SDL_SetRenderDrawColor(renderer,
+        (color_new >> 24) & 0xFF,
+        (color_new >> 16) & 0xFF, 
+        (color_new >> 8) & 0xFF,
+        (color_new) & 0xFF
+    );
 
     SDL_FRect rect = {0, 0, 680, 420};
 
@@ -37,8 +42,13 @@ static int native_draw_clear(lua_State *L) {
 static int native_draw_color(lua_State *L) {
     assert(lua_gettop(L) == 1);
 
-    int color = luaL_checknumber(L, 1);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    int color_new = luaL_checkinteger(L, 1);
+    color.r = (color_new >> 24) & 0xFF;
+    color.g = (color_new >> 16) & 0xFF;
+    color.b = (color_new >> 8) & 0xFF;
+    color.a = (color_new) & 0xFF;
+
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     
     lua_pop(L, 1);
 
@@ -104,8 +114,9 @@ static int native_draw_font(lua_State *L) {
     const char* font_name = NULL;
     int font_size = 0;
     static SDL_RWops* rw = NULL;
-    static char *current_font_name = NULL;
-    static char *failed_font_name = NULL;
+    static int current_font_size = 0;
+    static const char *current_font_name = NULL;
+    static const char *failed_font_name = NULL;
 
     if (argc == 1) {
         font_size = luaL_checkinteger(L, 1);
@@ -127,9 +138,11 @@ static int native_draw_font(lua_State *L) {
             break;
         }
         
-        if (font_name == current_font_name) {
+        if (font_name == current_font_name && font_size == current_font_size) {
             break;
         }
+
+        current_font_size = font_size;
 
         if (font_name != NULL) {
             TTF_Font* font_new = TTF_OpenFont(font_name, font_size);
@@ -175,19 +188,27 @@ static int native_draw_font(lua_State *L) {
  * @param[in] text @c string
  */
 static int native_draw_text(lua_State *L) {
-    assert(lua_gettop(L) == 3);
-
-    int x = luaL_checkinteger(L, 1);
-    int y = luaL_checkinteger(L, 2);
-    const char* text = luaL_checkstring(L, 3);
-
+    int x, y;
+    int argc = lua_gettop(L);
+    const char* text = NULL;
+    if (argc == 1) {
+        text = luaL_checkstring(L, 1);
+    } else if(argc == 3) {
+        x = (int) luaL_checknumber(L, 1);
+        y = (int) luaL_checknumber(L, 2);
+        text = luaL_checkstring(L, 3);
+    } 
+   
+    int result = 0;
     int textWidth = 0;
     int textHeight = 0;
-    int result = 0;
     SDL_Surface* textSurface = NULL;
     SDL_Texture* textTexture = NULL;
 
     do {
+        if (text == NULL) {
+            break;
+        }
         if (font == NULL) {
             fprintf(stderr, "Failed to select Font\n");
             break;
@@ -206,8 +227,10 @@ static int native_draw_text(lua_State *L) {
         }
 
         SDL_QueryTexture(textTexture, NULL, NULL, &textWidth, &textHeight);
-        SDL_Rect destRect = { x, y, textWidth, textHeight };
-        SDL_RenderCopy(renderer, textTexture, NULL, &destRect);
+        if (argc == 3) {
+            SDL_Rect destRect = { x, y, textWidth, textHeight };
+            SDL_RenderCopy(renderer, textTexture, NULL, &destRect);
+        }
 
         result = 2;
     }
