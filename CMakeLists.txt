@@ -9,13 +9,15 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CROSSCOMPILING TRUE)
 set(CMAKE_SYSTEM_NAME "Generic")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/toolchain.cmake")
 include_directories("${CMAKE_SOURCE_DIR}/vendor")
 
 # Zig
 set(ZIG_VERSION "0.13.0")
 set(ZIG_DOWNLOAD "http://ziglang.org/download")
-set(ZIG_CC "${CMAKE_SOURCE_DIR}/vendor/zig/zig")
+set(ZIG_CC "${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc")
+set(ZIG_CXX "${CMAKE_SOURCE_DIR}/vendor/zig/zig_cxx")
+#set(CMAKE_C_COMPILER ${ZIG_CC} CACHE BOOL "" FORCE) -- TODO: make work
+#set(CMAKE_CXX_COMPILER ${ZIG_CXX} CACHE BOOL "" FORCE)
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Darwin")
     set(ZIG_DOWNLOAD "${ZIG_DOWNLOAD}/${ZIG_VERSION}/zig-macos-${CMAKE_HOST_SYSTEM_PROCESSOR}-${ZIG_VERSION}.tar.xz")
 elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
@@ -32,8 +34,12 @@ if(NOT EXISTS ${ZIG_CC})
         SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/zig-subbuild"
         BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/zig-build"
     )
+    file(WRITE ${ZIG_CC} "#!/bin/sh\n${CMAKE_SOURCE_DIR}/vendor/zig/zig cc \$@\n")
+    file(WRITE ${ZIG_CXX} "#!/bin/sh\n${CMAKE_SOURCE_DIR}/vendor/zig/zig c++ \$@\n")
+    file(CHMOD ${ZIG_CC} FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ)
+    file(CHMOD ${ZIG_CXX} FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ)
 endif()
-find_program(ZIG zig PATHS "${CMAKE_SOURCE_DIR}/vendor/zig" REQUIRED)
+find_program(ZIGC zig PATHS "${CMAKE_SOURCE_DIR}/vendor/zig" REQUIRED)
 
 # Font
 set(TIRESIAS_FONT_URL "https://github.com/jgrande/ginga/raw/master/tool/ginga/fonts/Tiresias.ttf")
@@ -91,9 +97,10 @@ FetchContent_Declare(
     SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-subbuild"
     BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-build"
 )
+FetchContent_MakeAvailable(lib_lua)
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
     execute_process(
-        COMMAND make MYCFLAGS="-std=c99"
+        COMMAND make CC=${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc MYCFLAGS="-std=c99"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
     )
 endif()
@@ -101,10 +108,10 @@ add_library(lua-static STATIC IMPORTED)
 set_target_properties(lua-static PROPERTIES
     IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/lua/liblua.a"
 )
-FetchContent_MakeAvailable(lib_lua)
+find_program(LUAC lua PATHS "${CMAKE_SOURCE_DIR}/vendor/lua" REQUIRED)
 
 # Engine
-FetchContent_Populate(
+FetchContent_Declare(
     lib_engine
     GIT_REPOSITORY https://github.com/RodrigoDornelles/codename-videogame-engine
     GIT_TAG develop
@@ -112,11 +119,12 @@ FetchContent_Populate(
     SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-subbuild"
     BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-build"
 )
+FetchContent_MakeAvailable(lib_engine)
 set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/native.h")
 if(NOT EXISTS ${ENGINE_HEADER})
     execute_process(
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
-        COMMAND ${CMAKE_SOURCE_DIR}/vendor/lua/lua src/cli/main.lua build --core native --bundler
+        COMMAND ${LUAC} src/cli/main.lua build --core native --bundler
     )
     execute_process(
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine/dist"
