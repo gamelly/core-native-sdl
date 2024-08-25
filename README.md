@@ -2,14 +2,22 @@
 
  * a native core for <https://github.com/RodrigoDornelles/codename-videogame-engine>
 
+## How to build
+
 ```bash
-$ git clone
+git clone
 ```
 
 ```bash
-$ cmake .
+cmake -Bbuild -H.
 ```
 
 ```bash
-$ make
+make -C build
+```
+
+## How to run
+
+```bash
+./build/bin/engine -g vendor/engine/examples/asteroids/game.lua
 ```
