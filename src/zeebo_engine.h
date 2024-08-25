@@ -10,8 +10,6 @@
 #include "SDL/include/SDL.h"
 #include "SDL_ttf/SDL_ttf.h"
 
-extern bool running;
-
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
 

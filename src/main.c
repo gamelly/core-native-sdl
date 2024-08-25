@@ -6,7 +6,6 @@ char *game_file_name = "game.lua";
 FILE *file_ptr = NULL;
 char *file_buf = NULL;
 size_t file_len = 0;
-bool running = false;
 
 lua_State *L;
 SDL_Window* window;
@@ -16,7 +15,6 @@ int main(int argc, char* argv[]) {
     int i;
     int opt;
     int status = 1;
-    bool should_close = false;
     const int wpos = SDL_WINDOWPOS_UNDEFINED;
 
     while ((opt = getopt(argc, argv, "g:e:")) != -1) {
@@ -50,7 +48,6 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "Lua Engine error: %s\n", lua_tostring(L, -1));
                 break;
             }
-
         } else {
             file_ptr = fopen(engine_file_name, "r");
 
@@ -136,15 +133,16 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        SDL_Event event;
         status = 0;
-        running = true;
-        while (running && !should_close) {
+        SDL_Event event;
+        bool running = true;
+        while (running) {
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT) {
-                    should_close = true;
+                    running = false;
                 }
             }
+            status = 1;
 
             lua_getglobal(L, "native_callback_loop");
             lua_pushnumber(L, SDL_GetTicks());
@@ -158,6 +156,8 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "Lua Game draw error: %s\n", lua_tostring(L, -1));
                 break;
             }
+
+            status = 0;
 
             SDL_Delay(16);
         }
@@ -175,5 +175,5 @@ int main(int argc, char* argv[]) {
     }
 
     SDL_Quit();
-    return 0;
+    return status;
 }

@@ -115,7 +115,7 @@ static int native_draw_font(lua_State *L) {
         font_size = luaL_checkinteger(L, 2);
         lua_pop(L, 2);
     } else {
-        luaL_error(L, "wrong number of args");
+        luaL_error(L, "std.draw.font");
     }
 
     if (font && current_font_name != NULL && current_font_name != font_name) {
@@ -183,12 +183,11 @@ static int native_draw_text(lua_State *L) {
 
     int textWidth = 0;
     int textHeight = 0;
+    int result = 0;
     SDL_Surface* textSurface = NULL;
     SDL_Texture* textTexture = NULL;
 
     do {
-        running = false;
-
         if (font == NULL) {
             fprintf(stderr, "Failed to select Font\n");
             break;
@@ -210,7 +209,7 @@ static int native_draw_text(lua_State *L) {
         SDL_Rect destRect = { x, y, textWidth, textHeight };
         SDL_RenderCopy(renderer, textTexture, NULL, &destRect);
 
-        running = true;
+        result = 2;
     }
     while(0);
 
@@ -223,10 +222,15 @@ static int native_draw_text(lua_State *L) {
     }
 
     lua_pop(L, 3);
-    lua_pushinteger(L, textWidth);
-    lua_pushinteger(L, textHeight);
     
-    return 2;
+    if (result == 2) {
+        lua_pushinteger(L, textWidth);
+        lua_pushinteger(L, textHeight);
+    } else {
+        luaL_error(L, "std.draw.text");
+    }
+    
+    return result;
 }
 
 static const luaL_Reg zeebo_drawlib[] = {
