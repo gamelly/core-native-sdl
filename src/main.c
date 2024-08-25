@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
     int status = 1;
     const int wpos = SDL_WINDOWPOS_UNDEFINED;
 
+#ifndef NOT_USE_GETOPT
     while ((opt = getopt(argc, argv, "g:e:")) != -1) {
         switch (opt) {
             case 'g':
@@ -27,6 +28,7 @@ int main(int argc, char* argv[]) {
                 break;
         }
     }
+#endif
 
     do {
         L = luaL_newstate();

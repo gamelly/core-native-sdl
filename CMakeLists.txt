@@ -18,6 +18,7 @@ if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Darwin")
 elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set(ZIG_DOWNLOAD "${ZIG_DOWNLOAD}/${ZIG_VERSION}/zig-linux-${CMAKE_HOST_SYSTEM_PROCESSOR}-${ZIG_VERSION}.tar.xz")
 elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
+    add_compile_options("-DNOT_USE_GETOPT")
     set(ZIG_DOWNLOAD "${ZIG_DOWNLOAD}/${ZIG_VERSION}/zig-windows-${CMAKE_HOST_SYSTEM_PROCESSOR}-${ZIG_VERSION}.zip")
 endif()
 FetchContent_Populate(
@@ -83,14 +84,7 @@ FetchContent_Declare(
     BINARY_DIR "${CMAKE_SOURCE_DIR}/CMakeFiles/_deps/lua-build"
 )
 FetchContent_MakeAvailable(lib_lua)
-file(WRITE "${CMAKE_SOURCE_DIR}/vendor/lua/zig" "#!/bin/sh\n../zig/zig cc $*\n")
-if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
-    message(FATAL_ERROR "windows is not implemeted!")
-else()
-    execute_process(
-        COMMAND chmod +x zig
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
-    )
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
     execute_process(
         COMMAND make CC=./zig MYCFLAGS="-std=c99"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
