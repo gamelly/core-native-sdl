@@ -8,6 +8,7 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CROSSCOMPILING TRUE)
 set(CMAKE_SYSTEM_NAME "Generic")
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 include_directories("${CMAKE_SOURCE_DIR}/vendor")
 
@@ -100,7 +101,7 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
     )
     FetchContent_MakeAvailable(lib_lua)
     execute_process(
-        COMMAND make CC=${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc MYCFLAGS="-std=c99"
+        COMMAND make CC=${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc MYCFLAGS="-std=c99" MYLIBS="" 
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
     )
 endif()
@@ -145,4 +146,3 @@ add_executable(engine "${engine_files}")
 target_link_libraries(engine PRIVATE lua-static)
 target_link_libraries(engine PRIVATE SDL2::SDL2-static)
 target_link_libraries(engine PRIVATE SDL2_ttf::SDL2_ttf-static)
-target_compile_options(engine PRIVATE -static)
