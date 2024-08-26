@@ -8,7 +8,6 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CROSSCOMPILING TRUE)
 set(CMAKE_SYSTEM_NAME "Generic")
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 include_directories("${CMAKE_SOURCE_DIR}/vendor")
 
@@ -112,7 +111,8 @@ set_target_properties(lua-static PROPERTIES
 find_program(LUAC lua PATHS "${CMAKE_SOURCE_DIR}/vendor/lua" REQUIRED)
 
 # Engine
-set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/native.h")
+set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/bytecode.h")
+set(ENGINE_BYTECODE "${CMAKE_SOURCE_DIR}/vendor/engine/bytecode.lua")
 if(NOT EXISTS ${ENGINE_HEADER})
     FetchContent_Declare(
         lib_engine
@@ -127,9 +127,10 @@ if(NOT EXISTS ${ENGINE_HEADER})
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
         COMMAND ${LUAC} src/cli/main.lua build --core native --bundler
     )
+    file(COPY_FILE "${CMAKE_SOURCE_DIR}/vendor/engine/dist/main.lua" "${ENGINE_BYTECODE}")
     execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine/dist"
-        COMMAND  xxd -i main.lua
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor"
+        COMMAND  xxd -i engine/bytecode.lua
         RESULT_VARIABLE result
         OUTPUT_VARIABLE output
         ERROR_VARIABLE error
@@ -138,6 +139,31 @@ if(NOT EXISTS ${ENGINE_HEADER})
         file(WRITE ${ENGINE_HEADER} "${output}")
     else()
         message(FATAL_ERROR "Failed to execute xxd engine: ${error}")
+    endif()
+endif()
+
+# Game
+set(GAME_HEADER "${CMAKE_SOURCE_DIR}/vendor/game/bytecode.h")
+set(GAME_BYTECODE "${CMAKE_SOURCE_DIR}/vendor/game/bytecode.lua")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/game")
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/game")
+    string(LENGTH "${GAME}" GAME_LENGTH)
+    if(DEFINED GAME AND GAME_LENGTH)
+        file(COPY_FILE "${GAME}" "${GAME_BYTECODE}")
+        execute_process(
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor"
+            COMMAND  xxd -i game/bytecode.lua
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+        )
+        if(result EQUAL 0)
+            file(WRITE ${GAME_HEADER} "${output}")
+        else()
+            message(FATAL_ERROR "Failed to execute xxd game: ${error}")
+        endif()
+    else()
+        file(WRITE ${GAME_HEADER} "unsigned char* game_bytecode_lua = NULL;\nunsigned int game_bytecode_lua_len = 0;")
     endif()
 endif()
 

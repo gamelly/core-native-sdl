@@ -1,5 +1,6 @@
 #include "zeebo_engine.h"
-#include "engine/native.h"
+#include "engine/bytecode.h"
+#include "game/bytecode.h"
 
 //! @cond
 char *engine_file_name = NULL; 
@@ -19,12 +20,15 @@ bool lua_dofileOrBuffer(lua_State *L, const char* buffer, size_t buflen, const c
     do {
         if (file_name != NULL) {
             file_ptr = fopen(file_name, "r");
-
             if (file_ptr == NULL) {
                 fprintf(stderr, "Cannot open file: %s\n", file_name);
-                break;
+                if (buffer == NULL) {
+                    break;
+                }
             }
+        }
 
+        if (file_ptr != NULL) {
             do {
                 file_buf = realloc(file_buf, file_len + 4096);
                 file_len += fread(file_buf + file_len, 1, 4096, file_ptr);
@@ -36,20 +40,23 @@ bool lua_dofileOrBuffer(lua_State *L, const char* buffer, size_t buflen, const c
                 break;
             }
         }
-        else {
+        else{
             if (buffer == NULL) {
                 fprintf(stderr, "Bytecode is not preloaded.\n");
                 break;
             }
-            if (luaL_loadbuffer(L, buffer, buflen, "") != LUA_OK || lua_pcall(L, 0, 0, 0) != LUA_OK) {
+            if (luaL_loadbuffer(L, buffer, buflen, "") != LUA_OK || lua_pcall(L, 0, 1, 0) != LUA_OK) {
                 fprintf(stderr, "Lua error: %s\n", lua_tostring(L, -1));
                 break;
+            }
+            if (lua_isnil(L, 1)) {
+                lua_pop(L, 1);
             }
         }
         succes = true;
     }
     while (0);
-
+    
     if (file_ptr) {
         fclose(file_ptr);
     }
@@ -95,7 +102,7 @@ int main(int argc, char* argv[]) {
             lua_setglobal(L, zeebo_drawlib_list[i].name);
         }
 
-        if (!lua_dofileOrBuffer(L, main_lua, main_lua_len, engine_file_name)) {
+        if (!lua_dofileOrBuffer(L, engine_bytecode_lua, engine_bytecode_lua_len, engine_file_name)) {
             fprintf(stderr, "Engine start failed!\n");
             break;
         }
@@ -103,7 +110,7 @@ int main(int argc, char* argv[]) {
         lua_getglobal(L, "native_callback_init");
         lua_pushnumber(L, 640);
         lua_pushnumber(L, 480);
-        if (!lua_dofileOrBuffer(L, NULL, 0, game_file_name)) {
+        if (!lua_dofileOrBuffer(L, game_bytecode_lua, game_bytecode_lua_len, game_file_name)) {
             fprintf(stderr, "Game start failed!\n");
             break;
         }
