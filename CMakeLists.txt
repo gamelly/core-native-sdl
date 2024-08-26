@@ -89,16 +89,16 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(lib_sdl2 lib_sdl2_ttf)
 
 # Lua
-FetchContent_Declare(
-    lib_lua
-    GIT_REPOSITORY https://github.com/lua/lua
-    GIT_TAG v5.4.7
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/lua"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-build"
-)
-FetchContent_MakeAvailable(lib_lua)
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
+    FetchContent_Declare(
+        lib_lua
+        GIT_REPOSITORY https://github.com/lua/lua
+        GIT_TAG v5.4.7
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/lua"
+        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-subbuild"
+        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-build"
+    )
+    FetchContent_MakeAvailable(lib_lua)
     execute_process(
         COMMAND make CC=${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc MYCFLAGS="-std=c99"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
@@ -111,17 +111,17 @@ set_target_properties(lua-static PROPERTIES
 find_program(LUAC lua PATHS "${CMAKE_SOURCE_DIR}/vendor/lua" REQUIRED)
 
 # Engine
-FetchContent_Declare(
-    lib_engine
-    GIT_REPOSITORY https://github.com/RodrigoDornelles/codename-videogame-engine
-    GIT_TAG develop
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/engine"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-build"
-)
-FetchContent_MakeAvailable(lib_engine)
 set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/native.h")
 if(NOT EXISTS ${ENGINE_HEADER})
+    FetchContent_Declare(
+        lib_engine
+        GIT_REPOSITORY https://github.com/RodrigoDornelles/codename-videogame-engine
+        GIT_TAG develop
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/engine"
+        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-subbuild"
+        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-build"
+    )
+    FetchContent_MakeAvailable(lib_engine)
     execute_process(
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
         COMMAND ${LUAC} src/cli/main.lua build --core native --bundler
