@@ -4,14 +4,62 @@
 //! @cond
 char *engine_file_name = NULL; 
 char *game_file_name = "game.lua";
-FILE *file_ptr = NULL;
-char *file_buf = NULL;
-size_t file_len = 0;
 
 lua_State *L;
 SDL_Window* window;
 SDL_Renderer* renderer;
 //! @endcond
+
+bool lua_dofileOrBuffer(lua_State *L, const char* buffer, size_t buflen, const char* file_name) {
+    bool succes = false;
+    FILE *file_ptr = NULL;
+    char *file_buf = NULL;
+    size_t file_len = 0;
+    
+    do {
+        if (file_name != NULL) {
+            file_ptr = fopen(file_name, "r");
+
+            if (file_ptr == NULL) {
+                fprintf(stderr, "Cannot open file: %s\n", file_name);
+                break;
+            }
+
+            do {
+                file_buf = realloc(file_buf, file_len + 4096);
+                file_len += fread(file_buf + file_len, 1, 4096, file_ptr);
+            }
+            while(!feof(file_ptr));
+
+            if (luaL_dostring(L, file_buf) != LUA_OK) {
+                fprintf(stderr, "Lua error: %s\n", lua_tostring(L, -1));
+                break;
+            }
+        }
+        else {
+            if (buffer == NULL) {
+                fprintf(stderr, "Bytecode is not preloaded.\n");
+                break;
+            }
+            if (luaL_loadbuffer(L, buffer, buflen, "") != LUA_OK || lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                fprintf(stderr, "Lua error: %s\n", lua_tostring(L, -1));
+                break;
+            }
+        }
+        succes = true;
+    }
+    while (0);
+
+    if (file_ptr) {
+        fclose(file_ptr);
+    }
+    if (file_buf) {
+        free(file_buf);
+    }
+
+    return succes;
+}
+
 
 int main(int argc, char* argv[]) {
     int i;
@@ -47,62 +95,18 @@ int main(int argc, char* argv[]) {
             lua_setglobal(L, zeebo_drawlib_list[i].name);
         }
 
-        if (engine_file_name == NULL) {
-            if (luaL_loadbuffer(L, main_lua, main_lua_len, "") != LUA_OK || lua_pcall(L, 0, 0, 0) != LUA_OK) {
-                fprintf(stderr, "Lua Engine error: %s\n", lua_tostring(L, -1));
-                break;
-            }
-        } else {
-            file_ptr = fopen(engine_file_name, "r");
-
-            if (file_ptr == NULL) {
-                fprintf(stderr, "Cannot open engine file: %s\n", engine_file_name);
-                break;
-            }
-
-            do {
-                file_buf = realloc(file_buf, file_len + 4096);
-                file_len += fread(file_buf + file_len, 1, 4096, file_ptr);
-            }
-            while(!feof(file_ptr));
-
-            if (luaL_dostring(L, file_buf) != LUA_OK) {
-                fprintf(stderr, "Lua Game syntax error: %s\n", lua_tostring(L, -1));
-                break;
-            }
-
-            fclose(file_ptr);
-            free(file_buf);
-            file_buf = NULL;
-            file_len = 0;
-        }
-
-        file_ptr = fopen(game_file_name, "r");
-
-        if (file_ptr == NULL) {
-            fprintf(stderr, "Cannot open game file: %s\n", game_file_name);
+        if (!lua_dofileOrBuffer(L, main_lua, main_lua_len, engine_file_name)) {
+            fprintf(stderr, "Engine start failed!\n");
             break;
         }
-
-        do {
-            file_buf = realloc(file_buf, file_len + 4096);
-            file_len += fread(file_buf + file_len, 1, 4096, file_ptr);
-        }
-        while(!feof(file_ptr));
-
-        if (luaL_dostring(L, file_buf) != LUA_OK) {
-            fprintf(stderr, "Lua Game syntax error: %s\n", lua_tostring(L, -1));
-            break;
-        }
-        lua_pop(L, 1);
 
         lua_getglobal(L, "native_callback_init");
         lua_pushnumber(L, 640);
         lua_pushnumber(L, 480);
-        lua_pushstring(L, file_buf);
-
-        fclose(file_ptr);
-        free(file_buf);
+        if (!lua_dofileOrBuffer(L, NULL, 0, game_file_name)) {
+            fprintf(stderr, "Game start failed!\n");
+            break;
+        }
 
         if (lua_pcall(L, 3, 0, 0) != LUA_OK) {
             fprintf(stderr, "Lua Game loading error: %s\n", lua_tostring(L, -1));
