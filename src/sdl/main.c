@@ -12,11 +12,8 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
     int status = 1;
     const int wpos = SDL_WINDOWPOS_UNDEFINED;
 
-    do{ 
-        for(i = 0; i < zeebo_drawlib_size; i++) {
-            lua_pushcfunction(L, zeebo_drawlib_list[i].func);
-            lua_setglobal(L, zeebo_drawlib_list[i].name);
-        }
+    do {
+        native_draw_install(L);
 
         if (!lua_dofileOrBuffer(L, engine_bytecode_lua, engine_bytecode_lua_len, engine_file_name)) {
             fprintf(stderr, "Engine start failed!\n");

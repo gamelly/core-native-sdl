@@ -265,17 +265,24 @@ static int native_draw_text(lua_State *L) {
 }
 
 //! @cond
-static const luaL_Reg zeebo_drawlib[] = {
-    {"native_draw_start", native_draw_start},
-    {"native_draw_flush", native_draw_flush},
-    {"native_draw_clear", native_draw_clear},
-    {"native_draw_color", native_draw_color},
-    {"native_draw_rect", native_draw_rect},
-    {"native_draw_line", native_draw_line},
-    {"native_draw_font", native_draw_font},
-    {"native_draw_text", native_draw_text}
-};
+void native_draw_install(lua_State* L)
+{
+    int i = 0;
+    static const luaL_Reg lib[] = {
+        {"native_draw_start", native_draw_start},
+        {"native_draw_flush", native_draw_flush},
+        {"native_draw_clear", native_draw_clear},
+        {"native_draw_color", native_draw_color},
+        {"native_draw_rect", native_draw_rect},
+        {"native_draw_line", native_draw_line},
+        {"native_draw_font", native_draw_font},
+        {"native_draw_text", native_draw_text}
+    };
 
-const luaL_Reg *const zeebo_drawlib_list = zeebo_drawlib;
-const int zeebo_drawlib_size = sizeof(zeebo_drawlib)/sizeof(luaL_Reg);
+    while(i < sizeof(lib)/sizeof(luaL_Reg)) {
+        lua_pushcfunction(L, lib[i].func);
+        lua_setglobal(L, lib[i].name);
+        i = i + 1;
+    }    
+}
 //! @endcond

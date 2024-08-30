@@ -19,9 +19,6 @@
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
 
-extern const luaL_Reg *const zeebo_drawlib_list;
-extern const int zeebo_drawlib_size;
-
 //! @file src/lua/main.c
 int lua_main(lua_State *L, char *file_name);
 
@@ -32,6 +29,9 @@ bool lua_dofileOrBuffer(lua_State *L, const char* buffer, size_t buflen, const c
 
 //! @file src/sdl/main.c
 int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name);
+
+//! @file src/sdl/native_draw.c
+void native_draw_install(lua_State *L);
 
 //! @file src/sdl/native_input.c
 void native_keyboard_keydown(lua_State *L, SDL_Keycode key);
