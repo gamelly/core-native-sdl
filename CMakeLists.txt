@@ -9,6 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CROSSCOMPILING TRUE)
 set(CMAKE_SYSTEM_NAME "Generic")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+include_directories("${CMAKE_SOURCE_DIR}/src")
 include_directories("${CMAKE_SOURCE_DIR}/vendor")
 
 # Zig
@@ -167,8 +168,8 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/game")
     endif()
 endif()
 
-FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*.c")
-add_executable(engine "${engine_files}")
+FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*/*.c")
+add_executable(engine "${CMAKE_SOURCE_DIR}/src/main.c;${engine_files}")
 target_link_libraries(engine PRIVATE lua-static)
 target_link_libraries(engine PRIVATE SDL2::SDL2-static)
 target_link_libraries(engine PRIVATE SDL2_ttf::SDL2_ttf-static)
