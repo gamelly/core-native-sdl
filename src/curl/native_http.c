@@ -1,6 +1,35 @@
 #include "zeebo_engine.h"
 #include "curl/include/curl/curl.h"
 
+static size_t header_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    char http_status[] = "000";
+    int status = 0;
+    size_t total_size = size * nmemb;
+    lua_State *L = (lua_State *)userp;
+
+    do {
+        if (strncmp("HTTP/", (char*) contents, 5) == 0) {
+            memcpy(http_status, contents + 9, sizeof(http_status) - 1);
+            status = atoi(http_status);
+            lua_pushstring(L, "set");
+            lua_gettable(L, -2);
+            lua_pushstring(L, "status");
+            lua_pushinteger(L, status);
+            lua_pcall(L, 2, 0, 0);
+
+            lua_pushstring(L, "set");
+            lua_gettable(L, -2);
+            lua_pushstring(L, "ok");
+            lua_pushboolean(L, 200 <= status && status < 300);
+            lua_pcall(L, 2, 0, 0);
+            break;
+        }
+    }
+    while(0);
+
+    return total_size;
+}
+
 static size_t http_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t total_size = size * nmemb;
     lua_State *L = (lua_State *)userp;
@@ -18,25 +47,7 @@ static size_t http_callback(void *contents, size_t size, size_t nmemb, void *use
         lua_gettable(L, -2);
         lua_pushstring(L, "body");
         lua_pushstring(L, body);
-        if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-            break;
-        }
-
-        lua_pushstring(L, "set");
-        lua_gettable(L, -2);
-        lua_pushstring(L, "ok");
-        lua_pushboolean(L, true);
-        if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-            break;
-        }
-
-        lua_pushstring(L, "set");
-        lua_gettable(L, -2);
-        lua_pushstring(L, "status");
-        lua_pushinteger(L, 200);
-        if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-            break;
-        }
+        lua_pcall(L, 2, 0, 0);
     }
     while(0);
 
@@ -84,6 +95,8 @@ static int http_handler(lua_State *L) {
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, http_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, L);
+        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION , header_callback);
+        curl_easy_setopt(curl, CURLOPT_HEADERDATA, L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
         res = curl_easy_perform(curl);
