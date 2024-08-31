@@ -59,17 +59,14 @@ static size_t http_callback(void *contents, size_t size, size_t nmemb, void *use
 }
 
 static int http_handler(lua_State *L) {
+    assert(lua_istable(L, 1));
     const char *method = NULL;
     const char *url = NULL;
+    const char *error = NULL;
     CURL *curl = NULL;
     CURLcode res;
 
     do {
-        if (!lua_istable(L, 1)) {
-            luaL_error(L, "argument must be a table");
-            break;
-        }
-
         lua_pushstring(L, "method");
         lua_gettable(L, -2);
         method = lua_tostring(L, -1);
@@ -81,14 +78,14 @@ static int http_handler(lua_State *L) {
         lua_pop(L, 1); 
 
         if (method == NULL || url == NULL) {
-            luaL_error(L, "missing URL or METHOD");
+            error = "missing URL\n";
             break;
         }
 
         curl = curl_easy_init();
 
         if (!curl) {
-            luaL_error(L, "curl not init.");
+            error = "failed to init curl\n";
             break;
         }
 
@@ -104,11 +101,30 @@ static int http_handler(lua_State *L) {
         res = curl_easy_perform(curl);
 
         if(res != CURLE_OK) {
-            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            error = curl_easy_strerror(res);
             break;
         }
     }
     while(0);
+
+    if (error) {
+        lua_pushstring(L, "set");
+        lua_gettable(L, -2);
+        lua_pushstring(L, "body");
+        lua_pcall(L, 1, 0, 0);
+
+        lua_pushstring(L, "set");
+        lua_gettable(L, -2);
+        lua_pushstring(L, "ok");
+        lua_pushboolean(L, false);
+        lua_pcall(L, 2, 0, 0);
+
+        lua_pushstring(L, "set");
+        lua_gettable(L, -2);
+        lua_pushstring(L, "error");
+        lua_pushstring(L, error);
+        lua_pcall(L, 2, 0, 0);
+    }
 
     if (curl) {
         curl_easy_cleanup(curl);
