@@ -62,33 +62,6 @@ if(NOT EXISTS ${TIRESIAS_HEADER_PATH})
     endif()
 endif()
 
-# SDL
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-set(SDL2_TEST OFF CACHE BOOL "" FORCE)
-set(SDL2_SHARED OFF CACHE BOOL "" FORCE)
-set(SDL2_STATIC ON CACHE BOOL "" FORCE)
-set(SDL2TTF_VENDORED ON CACHE BOOL "" FORCE)
-set(SDL2TTF_HARFBUZZ OFF CACHE BOOL "" FORCE)
-set(SDL2TTF_INSTALL OFF CACHE BOOL "" FORCE)
-set(SDL2TTF_SAMPLES OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-    lib_sdl2
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL
-    GIT_TAG release-2.30.6
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-build"
-)
-FetchContent_Declare(
-    lib_sdl2_ttf
-    GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf
-    GIT_TAG release-2.22.0
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL_ttf"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-ttf-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-ttf-build"
-)
-FetchContent_MakeAvailable(lib_sdl2 lib_sdl2_ttf)
-
 # Lua
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
     FetchContent_Declare(
@@ -168,8 +141,55 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/game")
     endif()
 endif()
 
+# SDL
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(SDL2_TEST OFF CACHE BOOL "" FORCE)
+set(SDL2_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL2_STATIC ON CACHE BOOL "" FORCE)
+set(SDL2TTF_VENDORED ON CACHE BOOL "" FORCE)
+set(SDL2TTF_HARFBUZZ OFF CACHE BOOL "" FORCE)
+set(SDL2TTF_INSTALL OFF CACHE BOOL "" FORCE)
+set(SDL2TTF_SAMPLES OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    lib_sdl2
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL
+    GIT_TAG release-2.30.6
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL"
+    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-subbuild"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-build"
+)
+FetchContent_Declare(
+    lib_sdl2_ttf
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf
+    GIT_TAG release-2.22.0
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL_ttf"
+    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-ttf-subbuild"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-ttf-build"
+)
+FetchContent_MakeAvailable(lib_sdl2 lib_sdl2_ttf)
+
+# Curl
+set(HTTP_ONLY ON CACHE BOOL "" FORCE)
+set(PICKY_COMPILER OFF CACHE BOOL "" FORCE)
+set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
+set(BUILD_STATIC_CURL OFF CACHE BOOL "" FORCE)
+set(ENABLE_ARES OFF CACHE BOOL "" FORCE)
+set(CURL_DISABLE_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    lib_curl
+    GIT_REPOSITORY https://github.com/curl/curl
+    GIT_TAG curl-8_9_1
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/curl"
+    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/curl-subbuild"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/curl-build"
+)
+FetchContent_MakeAvailable(lib_curl)
+
 FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*/*.c")
 add_executable(engine "${CMAKE_SOURCE_DIR}/src/main.c;${engine_files}")
 target_link_libraries(engine PRIVATE lua-static)
 target_link_libraries(engine PRIVATE SDL2::SDL2-static)
 target_link_libraries(engine PRIVATE SDL2_ttf::SDL2_ttf-static)
+target_link_libraries(engine PRIVATE CURL::libcurl)

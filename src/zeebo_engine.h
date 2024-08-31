@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 //! @cond
 #ifndef NOT_USE_GETOPT
@@ -18,6 +19,9 @@
 //! @cond
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
+
+//! @file src/curl/native_http.c
+void native_http_install(lua_State* L);
 
 //! @file src/lua/main.c
 int lua_main(lua_State *L, char *file_name);

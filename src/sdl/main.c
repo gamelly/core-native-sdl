@@ -14,6 +14,7 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
 
     do {
         native_draw_install(L);
+        native_http_install(L);
 
         if (!lua_dofileOrBuffer(L, engine_bytecode_lua, engine_bytecode_lua_len, engine_file_name)) {
             fprintf(stderr, "Engine start failed!\n");
