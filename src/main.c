@@ -5,6 +5,7 @@ int main(int argc, char* argv[])
     int opt;
     int status = 1;
     int lua_argc = 0;
+    bool ncurses = false;
     char **lua_argv = NULL;
     char *lua_path = NULL;
     char *lua_file_name = NULL;
@@ -13,23 +14,25 @@ int main(int argc, char* argv[])
     static lua_State *L = NULL;
 
 #ifndef NOT_USE_GETOPT
-    while ((opt = getopt(argc, argv, "g:e:P:L:")) != -1) {
+    while ((opt = getopt(argc, argv, "cg:e:P:L:")) != -1) {
         switch (opt) {
+            case 'c':
+                ncurses = true;
+                break;
             case 'g':
                 game_file_name = optarg;
                 break;
             case 'e':
                 engine_file_name = optarg;
                 break;
-
             case 'P':
                 lua_path = optarg;
                 break;
-
             case 'L': 
                 lua_file_name = optarg;
                 lua_argc = argc - optind;
                 lua_argv = &argv[optind];
+                break;
         }
     }
 #endif
@@ -51,6 +54,11 @@ int main(int argc, char* argv[])
         if (lua_file_name != NULL) {
             lua_addArgs(L, lua_argc, lua_argv);
             status = lua_main(L, lua_file_name);
+            break;
+        }
+
+        if (ncurses) {
+            status = curses_main_core(L);
             break;
         }
 

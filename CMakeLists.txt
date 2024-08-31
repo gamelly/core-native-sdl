@@ -111,6 +111,33 @@ set_target_properties(lua-static PROPERTIES
 )
 find_program(LUAC lua PATHS "${CMAKE_SOURCE_DIR}/vendor/lua" REQUIRED)
 
+# Curses
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/ncurses/ncurses")
+    FetchContent_Declare(
+        lib_ncurses
+        GIT_REPOSITORY https://github.com/mirror/ncurses
+        GIT_TAG v6.4
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/ncurses"
+        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/ncurses-subbuild"
+        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/ncurses-build"
+    )
+    FetchContent_MakeAvailable(lib_ncurses)
+    
+    # Build ncurses from source
+    execute_process(
+        COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/CMakeFiles/_deps/ncurses-install
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/ncurses"
+    )
+    execute_process(
+        COMMAND make libncurses.a
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/ncurses"
+    )
+endif()
+add_library(ncurses-static STATIC IMPORTED)
+set_target_properties(ncurses-static PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/ncurses/lib/libncurses.a"
+)
+
 # Engine
 set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/bytecode.h")
 set(ENGINE_BYTECODE "${CMAKE_SOURCE_DIR}/vendor/engine/bytecode.lua")
@@ -171,5 +198,6 @@ endif()
 FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*/*.c")
 add_executable(engine "${CMAKE_SOURCE_DIR}/src/main.c;${engine_files}")
 target_link_libraries(engine PRIVATE lua-static)
+target_link_libraries(engine PRIVATE ncurses-static)
 target_link_libraries(engine PRIVATE SDL2::SDL2-static)
 target_link_libraries(engine PRIVATE SDL2_ttf::SDL2_ttf-static)

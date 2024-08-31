@@ -19,6 +19,9 @@
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
 
+//! @file src/curses/main.c
+int curses_main_core(lua_State *L);
+
 //! @file src/lua/main.c
 int lua_main(lua_State *L, char *file_name);
 
