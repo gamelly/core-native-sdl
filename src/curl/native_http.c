@@ -97,6 +97,8 @@ static int http_handler(lua_State *L) {
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, L);
         curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION , header_callback);
         curl_easy_setopt(curl, CURLOPT_HEADERDATA, L);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
         res = curl_easy_perform(curl);
