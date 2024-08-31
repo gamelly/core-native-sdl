@@ -129,7 +129,7 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/ncurses/ncurses")
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/ncurses"
     )
     execute_process(
-        COMMAND make libncurses.a
+        COMMAND make
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/ncurses"
     )
 endif()
