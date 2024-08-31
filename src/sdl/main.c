@@ -106,6 +106,7 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
         SDL_DestroyWindow(window);
     }
     if (L) {
+        native_http_cleanup(L);
         lua_close(L);
     }
 
