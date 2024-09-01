@@ -169,6 +169,26 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(lib_sdl2 lib_sdl2_ttf)
 
+# Bear SSL
+set(USE_LIBIDN2 OFF CACHE BOOL "" FORCE)
+set(BEARSSL_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/vendor/bearssl/inc")
+set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/vendor/bearssl/build;${CMAKE_PREFIX_PATH}")
+FetchContent_Declare(
+    lib_bearssl
+    GIT_REPOSITORY https://www.bearssl.org/git/BearSSL
+    GIT_TAG v0.6
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/bearssl"
+    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/bearssl-subbuild"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/bearssl-build"
+)
+FetchContent_MakeAvailable(lib_bearssl)
+if (NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/bearssl/build/libbearssl.a")
+    execute_process(
+        COMMAND make build/libbearssl.a
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/bearssl"
+    )
+endif()
+
 # Curl
 set(HTTP_ONLY ON CACHE BOOL "" FORCE)
 set(PICKY_COMPILER OFF CACHE BOOL "" FORCE)
@@ -178,6 +198,10 @@ set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
 set(BUILD_STATIC_CURL OFF CACHE BOOL "" FORCE)
 set(ENABLE_ARES OFF CACHE BOOL "" FORCE)
 set(CURL_DISABLE_INSTALL OFF CACHE BOOL "" FORCE)
+set(CURL_USE_OPENSSL OFF CACHE BOOL "" FORCE)
+set(CURL_USE_BEARSSL ON CACHE BOOL "" FORCE)
+set(CURL_USE_LIBPSL OFF CACHE BOOL "" FORCE)
+set(CURL_USE_LIBSSH2 OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     lib_curl
     GIT_REPOSITORY https://github.com/curl/curl
