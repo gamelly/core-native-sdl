@@ -1,6 +1,67 @@
 #include "zeebo_engine.h"
 #include "curl/include/curl/curl.h"
 
+static bool curl_add_method_and_body(lua_State *L, CURL *curl)
+{
+    bool success = true;
+    const char *method = NULL;
+    const char *body = NULL;
+
+    do {
+        lua_pushstring(L, "method");
+        lua_gettable(L, -2);
+        method = lua_tostring(L, -1);
+        lua_pop(L, 1);
+
+        if (method == NULL) {
+            success = false;
+            break;
+        }
+
+        if (strcmp(method, "GET") == 0) {
+            curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+            break;
+        } 
+
+        if (strcmp(method, "HEAD") == 0) {
+            curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+            break;
+        }
+
+        lua_pushstring(L, "body_content");
+        lua_gettable(L, -2);
+        body = lua_tostring(L, -1);
+        lua_pop(L, 1); 
+
+        if (body != NULL && strlen(body) > 0) {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
+        }
+        
+
+        if (strcmp(method, "POST") == 0) {
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+            break;
+        }
+        else if (strcmp(method, "PUT") == 0) {
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+            break;
+        } 
+        else if (strcmp(method, "DELETE") == 0) {
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+            break;
+        }
+        else if (strcmp(method, "PATCH") == 0) {
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+            break;
+        }
+
+        success = false;
+    }
+    while(0);
+
+    return success;
+}
+
 static size_t header_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     char http_status[] = "000";
     int status = 0;
@@ -34,7 +95,7 @@ static size_t http_callback(void *contents, size_t size, size_t nmemb, void *use
     size_t total_size = size * nmemb;
     lua_State *L = (lua_State *)userp;
     char *body = (char *) malloc(total_size + 1);
-    char *old_body = NULL;
+    const char *old_body = NULL;
 
     do {
         if (body == NULL) {
@@ -81,17 +142,12 @@ static int http_handler(lua_State *L) {
     CURLcode res;
 
     do {
-        lua_pushstring(L, "method");
-        lua_gettable(L, -2);
-        method = lua_tostring(L, -1);
-        lua_pop(L, 1);
-
         lua_pushstring(L, "url");
         lua_gettable(L, -2);
         url = lua_tostring(L, -1);
         lua_pop(L, 1); 
 
-        if (method == NULL || url == NULL) {
+        if (url == NULL) {
             error = "missing URL\n";
             break;
         }
@@ -100,6 +156,11 @@ static int http_handler(lua_State *L) {
 
         if (!curl) {
             error = "failed to init curl\n";
+            break;
+        }
+
+        if (!curl_add_method_and_body(L, curl)) {
+            error = "invalid METHOD\n";
             break;
         }
 
