@@ -66,28 +66,12 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
         }
 
         status = 0;
-        SDL_Event event;
         bool running = true;
         while (running) {
-            while (SDL_PollEvent(&event)) {
-                if (event.type == SDL_QUIT) {
-                    running = false;
-                }
-                else if(event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    app_width = event.window.data1;
-                    app_height = event.window.data2;
-                    native_screen_resize(L);
-                }
-                else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN && SDL_GetModState() & KMOD_ALT) {
-                    native_screen_fullscreen_toggle();
-                }
-                else if (event.type == SDL_KEYDOWN) {
-                    native_keyboard_keydown(L, event.key.keysym.sym);
-                }
-                else if (event.type == SDL_KEYUP) {
-                    native_keyboard_keyup(L, event.key.keysym.sym);
-                }
+            if (!native_event_pool(L)) {
+                running = false;
             }
+
             status = 1;
 
             lua_getglobal(L, "native_callback_loop");

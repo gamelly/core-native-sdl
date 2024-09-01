@@ -42,11 +42,7 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name);
 //! @file src/sdl/native_draw.c
 void native_draw_install(lua_State *L);
 
-//! @file src/sdl/native_input.c
-void native_keyboard_keydown(lua_State *L, SDL_Keycode key);
-void native_keyboard_keyup(lua_State *L, SDL_Keycode key);
-
-void native_screen_resize(lua_State *L);
-void native_screen_fullscreen_toggle();
+//! @file src/sdl/native_event.c
+bool native_draw_pool(lua_State *L);
 
 //! @endcond
