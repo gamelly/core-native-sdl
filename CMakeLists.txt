@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.19)
 set(CMAKE_C_COMPILER_WORKS TRUE)
 set(CMAKE_CXX_COMPILER_WORKS TRUE)
 
@@ -9,6 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CROSSCOMPILING TRUE)
 set(CMAKE_SYSTEM_NAME "Generic")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+include_directories("${CMAKE_SOURCE_DIR}/src")
 include_directories("${CMAKE_SOURCE_DIR}/vendor")
 
 # Zig
@@ -61,6 +62,85 @@ if(NOT EXISTS ${TIRESIAS_HEADER_PATH})
     endif()
 endif()
 
+# Lua
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
+    FetchContent_Declare(
+        lib_lua
+        GIT_REPOSITORY https://github.com/lua/lua
+        GIT_TAG v5.4.7
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/lua"
+        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-subbuild"
+        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-build"
+    )
+    FetchContent_MakeAvailable(lib_lua)
+    execute_process(
+        COMMAND make CC=${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc MYCFLAGS="-std=c99" MYLIBS="" 
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
+    )
+endif()
+add_library(lua-static STATIC IMPORTED)
+set_target_properties(lua-static PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/lua/liblua.a"
+)
+find_program(LUAC lua PATHS "${CMAKE_SOURCE_DIR}/vendor/lua" REQUIRED)
+
+# Engine
+set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/bytecode.h")
+set(ENGINE_BYTECODE "${CMAKE_SOURCE_DIR}/vendor/engine/bytecode.lua")
+if(NOT EXISTS ${ENGINE_HEADER})
+    FetchContent_Declare(
+        lib_engine
+        GIT_REPOSITORY https://github.com/RodrigoDornelles/codename-videogame-engine
+        GIT_TAG develop
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/engine"
+        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-subbuild"
+        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-build"
+    )
+    FetchContent_MakeAvailable(lib_engine)
+    execute_process(
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
+        COMMAND ${LUAC} src/cli/main.lua build --core native --bundler
+    )
+    file(COPY_FILE "${CMAKE_SOURCE_DIR}/vendor/engine/dist/main.lua" "${ENGINE_BYTECODE}")
+    execute_process(
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor"
+        COMMAND  xxd -i engine/bytecode.lua
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+    )
+    if(result EQUAL 0)
+        file(WRITE ${ENGINE_HEADER} "${output}")
+    else()
+        message(FATAL_ERROR "Failed to execute xxd engine: ${error}")
+    endif()
+endif()
+
+# Game
+set(GAME_HEADER "${CMAKE_SOURCE_DIR}/vendor/game/bytecode.h")
+set(GAME_BYTECODE "${CMAKE_SOURCE_DIR}/vendor/game/bytecode.lua")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/game")
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/game")
+    string(LENGTH "${GAME}" GAME_LENGTH)
+    if(DEFINED GAME AND GAME_LENGTH)
+        file(COPY_FILE "${GAME}" "${GAME_BYTECODE}")
+        execute_process(
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor"
+            COMMAND  xxd -i game/bytecode.lua
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+        )
+        if(result EQUAL 0)
+            file(WRITE ${GAME_HEADER} "${output}")
+        else()
+            message(FATAL_ERROR "Failed to execute xxd game: ${error}")
+        endif()
+    else()
+        file(WRITE ${GAME_HEADER} "unsigned char* game_bytecode_lua = NULL;\nunsigned int game_bytecode_lua_len = 0;")
+    endif()
+endif()
+
 # SDL
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(SDL2_TEST OFF CACHE BOOL "" FORCE)
@@ -88,61 +168,28 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(lib_sdl2 lib_sdl2_ttf)
 
-# Lua
+# Curl
+set(HTTP_ONLY ON CACHE BOOL "" FORCE)
+set(PICKY_COMPILER OFF CACHE BOOL "" FORCE)
+set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
+set(BUILD_STATIC_CURL OFF CACHE BOOL "" FORCE)
+set(ENABLE_ARES OFF CACHE BOOL "" FORCE)
+set(CURL_DISABLE_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
-    lib_lua
-    GIT_REPOSITORY https://github.com/lua/lua
-    GIT_TAG v5.4.7
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/lua"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-build"
+    lib_curl
+    GIT_REPOSITORY https://github.com/curl/curl
+    GIT_TAG curl-8_9_1
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/curl"
+    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/curl-subbuild"
+    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/curl-build"
 )
-FetchContent_MakeAvailable(lib_lua)
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
-    execute_process(
-        COMMAND make CC=${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc MYCFLAGS="-std=c99"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
-    )
-endif()
-add_library(lua-static STATIC IMPORTED)
-set_target_properties(lua-static PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/lua/liblua.a"
-)
-find_program(LUAC lua PATHS "${CMAKE_SOURCE_DIR}/vendor/lua" REQUIRED)
+FetchContent_MakeAvailable(lib_curl)
 
-# Engine
-FetchContent_Declare(
-    lib_engine
-    GIT_REPOSITORY https://github.com/RodrigoDornelles/codename-videogame-engine
-    GIT_TAG develop
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/engine"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-build"
-)
-FetchContent_MakeAvailable(lib_engine)
-set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/native.h")
-if(NOT EXISTS ${ENGINE_HEADER})
-    execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
-        COMMAND ${LUAC} src/cli/main.lua build --core native --bundler
-    )
-    execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine/dist"
-        COMMAND  xxd -i main.lua
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE output
-        ERROR_VARIABLE error
-    )
-    if(result EQUAL 0)
-        file(WRITE ${ENGINE_HEADER} "${output}")
-    else()
-        message(FATAL_ERROR "Failed to execute xxd engine: ${error}")
-    endif()
-endif()
-
-FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*.c")
-add_executable(engine "${engine_files}")
+FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*/*.c")
+add_executable(engine "${CMAKE_SOURCE_DIR}/src/main.c;${engine_files}")
 target_link_libraries(engine PRIVATE lua-static)
 target_link_libraries(engine PRIVATE SDL2::SDL2-static)
 target_link_libraries(engine PRIVATE SDL2_ttf::SDL2_ttf-static)
-target_compile_options(engine PRIVATE -static)
+target_link_libraries(engine PRIVATE CURL::libcurl)

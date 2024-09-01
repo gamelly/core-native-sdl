@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 //! @cond
 #ifndef NOT_USE_GETOPT
@@ -16,12 +17,32 @@
 #include "SDL_ttf/SDL_ttf.h"
 
 //! @cond
+extern int app_width;
+extern int app_height;
+extern bool app_fullscreen;
+
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
 
-extern const luaL_Reg *const zeebo_drawlib_list;
-extern const int zeebo_drawlib_size;
+//! @file src/curl/native_http.c
+void native_http_install(lua_State* L);
+void native_http_cleanup(lua_State* L);
 
-void native_keyboard_keydown(lua_State *L, SDL_Keycode key);
-void native_keyboard_keyup(lua_State *L, SDL_Keycode key);
+//! @file src/lua/main.c
+int lua_main(lua_State *L, char *file_name);
+
+//! @file src/lua/lib.c
+void lua_addPath(lua_State *L, const char* path);
+void lua_addArgs(lua_State *L, int argc, char* argv[]);
+bool lua_dofileOrBuffer(lua_State *L, const char* buffer, size_t buflen, const char* file_name);
+
+//! @file src/sdl/main.c
+int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name);
+
+//! @file src/sdl/native_draw.c
+void native_draw_install(lua_State *L);
+
+//! @file src/sdl/native_event.c
+bool native_draw_pool(lua_State *L);
+
 //! @endcond
