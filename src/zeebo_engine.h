@@ -22,6 +22,7 @@ extern SDL_Renderer* renderer;
 
 //! @file src/curl/native_http.c
 void native_http_install(lua_State* L);
+void native_http_cleanup(lua_State* L);
 
 //! @file src/lua/main.c
 int lua_main(lua_State *L, char *file_name);
