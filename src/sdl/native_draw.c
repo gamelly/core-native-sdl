@@ -30,7 +30,7 @@ static int native_draw_clear(lua_State *L) {
         (color_new) & 0xFF
     );
 
-    SDL_FRect rect = {0, 0, 680, 420};
+    SDL_FRect rect = {0, 0, app_width, app_height};
 
     SDL_RenderFillRectF(renderer, &rect);
 
@@ -283,6 +283,6 @@ void native_draw_install(lua_State* L)
         lua_pushcfunction(L, lib[i].func);
         lua_setglobal(L, lib[i].name);
         i = i + 1;
-    }    
+    }
 }
 //! @endcond

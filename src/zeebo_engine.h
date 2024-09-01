@@ -17,6 +17,10 @@
 #include "SDL_ttf/SDL_ttf.h"
 
 //! @cond
+extern int app_width;
+extern int app_height;
+extern bool app_fullscreen;
+
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
 
@@ -41,5 +45,8 @@ void native_draw_install(lua_State *L);
 //! @file src/sdl/native_input.c
 void native_keyboard_keydown(lua_State *L, SDL_Keycode key);
 void native_keyboard_keyup(lua_State *L, SDL_Keycode key);
+
+void native_screen_resize(lua_State *L);
+void native_screen_fullscreen_toggle();
 
 //! @endcond

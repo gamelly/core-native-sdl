@@ -1,5 +1,9 @@
 #include "zeebo_engine.h"
 
+int app_width = 648;
+int app_height = 480;
+bool app_fullscreen = false;
+
 int main(int argc, char* argv[]) 
 {
     int opt;
@@ -13,23 +17,31 @@ int main(int argc, char* argv[])
     static lua_State *L = NULL;
 
 #ifndef NOT_USE_GETOPT
-    while ((opt = getopt(argc, argv, "g:e:P:L:")) != -1) {
+    while ((opt = getopt(argc, argv, "e:fg:h:w:P:L:")) != -1) {
         switch (opt) {
-            case 'g':
-                game_file_name = optarg;
-                break;
             case 'e':
                 engine_file_name = optarg;
                 break;
-
+            case 'f':
+                app_fullscreen = true;
+                break;
+            case 'g':
+                game_file_name = optarg;
+                break;
+            case 'h':
+                app_height = atoi(optarg);
+                break;
+            case 'w':
+                app_width = atoi(optarg);
+                break;
             case 'P':
                 lua_path = optarg;
                 break;
-
             case 'L': 
                 lua_file_name = optarg;
                 lua_argc = argc - optind;
                 lua_argv = &argv[optind];
+                break;
         }
     }
 #endif

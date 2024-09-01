@@ -22,8 +22,8 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
         }
 
         lua_getglobal(L, "native_callback_init");
-        lua_pushnumber(L, 640);
-        lua_pushnumber(L, 480);
+        lua_pushnumber(L, app_width);
+        lua_pushnumber(L, app_height);
         if (!lua_dofileOrBuffer(L, game_bytecode_lua, game_bytecode_lua_len, game_file_name)) {
             fprintf(stderr, "Game start failed!\n");
             break;
@@ -49,7 +49,10 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
             break;
         }
 
-        window = SDL_CreateWindow("Hello World SDL", wpos, wpos, 640, 480, SDL_WINDOW_SHOWN);
+        window = SDL_CreateWindow("Hello World SDL", wpos, wpos, app_width, app_height, SDL_WINDOW_SHOWN | (app_fullscreen?
+            SDL_WINDOW_FULLSCREEN_DESKTOP:
+            SDL_WINDOW_RESIZABLE
+        ));
 
         if (!window) {
             fprintf(stderr, "Unable to create window: %s\n", SDL_GetError());
@@ -69,6 +72,14 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT) {
                     running = false;
+                }
+                else if(event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    app_width = event.window.data1;
+                    app_height = event.window.data2;
+                    native_screen_resize(L);
+                }
+                else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN && SDL_GetModState() & KMOD_ALT) {
+                    native_screen_fullscreen_toggle();
                 }
                 else if (event.type == SDL_KEYDOWN) {
                     native_keyboard_keydown(L, event.key.keysym.sym);
