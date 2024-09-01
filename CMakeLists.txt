@@ -97,6 +97,7 @@ if(NOT EXISTS ${ENGINE_HEADER})
         BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-build"
     )
     FetchContent_MakeAvailable(lib_engine)
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine/dist")
     execute_process(
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
         COMMAND ${LUAC} src/cli/main.lua build --core native --bundler
