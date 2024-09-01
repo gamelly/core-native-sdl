@@ -34,11 +34,21 @@ static size_t http_callback(void *contents, size_t size, size_t nmemb, void *use
     size_t total_size = size * nmemb;
     lua_State *L = (lua_State *)userp;
     char *body = (char *) malloc(total_size + 1);
+    char *old_body = NULL;
 
     do {
         if (body == NULL) {
             break;
         }
+
+        lua_pushstring(L, "std");
+        lua_gettable(L, -2);
+        lua_pushstring(L, "http");
+        lua_gettable(L, -2);
+        lua_pushstring(L, "body");
+        lua_gettable(L, -2);
+        old_body = lua_tostring(L, -1);
+        lua_pop(L, 3);
         
         memcpy(body, contents, total_size);
         body[total_size] = '\0';
@@ -46,7 +56,11 @@ static size_t http_callback(void *contents, size_t size, size_t nmemb, void *use
         lua_pushstring(L, "set");
         lua_gettable(L, -2);
         lua_pushstring(L, "body");
-        lua_pushstring(L, body);
+        if (old_body) {
+            lua_pushfstring(L, "%s%s", old_body, body);
+        } else {
+            lua_pushstring(L, body);
+        }
         lua_pcall(L, 2, 0, 0);
     }
     while(0);
