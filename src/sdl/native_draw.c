@@ -284,5 +284,12 @@ void native_draw_install(lua_State* L)
         lua_setglobal(L, lib[i].name);
         i = i + 1;
     }
+
+    lua_newtable(L);
+    lua_pushboolean(L, 1);
+    lua_seti(L, -2, 1);
+    lua_pushboolean(L, 1);
+    lua_seti(L, -2, 2);
+    lua_setglobal(L, "native_dict_poly_repeats");
 }
 //! @endcond
