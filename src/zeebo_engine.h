@@ -43,6 +43,6 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name);
 void native_draw_install(lua_State *L);
 
 //! @file src/sdl/native_event.c
-bool native_draw_pool(lua_State *L);
+bool native_event_pool(lua_State *L);
 
 //! @endcond
