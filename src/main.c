@@ -4,6 +4,51 @@ int app_width = 648;
 int app_height = 480;
 bool app_fullscreen = false;
 
+/**
+ * @mainpage
+ *
+ * @section build How to build
+ *
+ * You should only need @b cmake and @b make, the project has the recipe
+ * for downloading all dependencies including cross compilers.
+ * 
+ * @par only engine
+ * @code
+ * git clone
+ * cmake -Bbuild -H.
+ * make -C build
+ * @endcode
+ *
+ * @par engine + game
+ * @code
+ * git clone
+ * cmake -Bbuild -H. -DGAME="/path/to/your/game.lua"
+ * make -C build
+ * @endcode
+ *
+ * @par custom engine + game
+ * @code
+ * git clone
+ * cmake -Bbuild -H. -DGAME="/path/to/your/game.lua" -DENGINE="/path/to/your/engine.lua"
+ * make -C build
+ * @endcode
+ *
+ * @section run How to run
+ *
+ * @par simple way
+ *
+ * put a @c engine.exe in some path to your @c game.lua and double click the executable!
+ *
+ * @par passing file location flag
+ * @code
+ * engine.exe -g /path/to/your/game.lua
+ * @endcode
+ *
+ * @par another flags
+ * @code
+ * engine.exe -f -w 1980 -h 1280 -e /path/to/your/engine.lua -g /path/to/your/game.lua
+ * @endcode
+ */
 int main(int argc, char* argv[]) 
 {
     int opt;

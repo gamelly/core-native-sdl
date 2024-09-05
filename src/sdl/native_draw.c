@@ -6,6 +6,11 @@ static TTF_Font* font = NULL;
 static SDL_Color current_color = {255, 255, 255, 255};
 //! @endcond
 
+/**
+ * @defgroup api
+ * @{
+ */
+
 static int native_draw_start(lua_State *L) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
@@ -264,7 +269,10 @@ static int native_draw_text(lua_State *L) {
     return result;
 }
 
-//! @cond
+/**
+ * @}
+ */
+
 void native_draw_install(lua_State* L)
 {
     int i = 0;
@@ -292,4 +300,38 @@ void native_draw_install(lua_State* L)
     lua_seti(L, -2, 2);
     lua_setglobal(L, "native_dict_poly_repeats");
 }
-//! @endcond
+
+#ifdef DOXYGEN
+/**
+ * @defgroup api
+ * @{
+ */
+
+/**
+ * @short @c std.draw.poly
+ * @par Lua definition
+ * @code
+ * local native_dict_poly = {
+ *  repeats = {true, true},
+ *  line = function (x1, y1, x2, y2)
+ *    native_draw_line(x1, y1, x2, y2)
+ *  end
+ * }
+ * @endcode
+ */
+class native_dict_poly {
+public:
+    bool repeats[2] = {true, true};
+    /**
+     * @param[in] x1 @c double
+     * @param[in] y1 @c double
+     * @param[in] x2 @c double
+     * @param[in] y2 @c double
+     */
+    int line(lua_State* L);
+};
+
+/**
+ * @}
+ */
+#endif

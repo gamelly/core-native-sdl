@@ -1,8 +1,8 @@
 # Custom Configs
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = "Native engine"
+PROJECT_NAME           = "Native SDL Core"
 PROJECT_NUMBER         = 0.0.6
-PROJECT_BRIEF          = "Native core for a Game engine"
+PROJECT_BRIEF          = "create your own game-engine with just lua."
 PROJECT_LOGO           = 
 OUTPUT_DIRECTORY       = .
 RECURSIVE              = YES
@@ -10,22 +10,22 @@ CREATE_SUBDIRS         = NO
 STRIP_CODE_COMMENTS    = NO
 CALL_GRAPH             = YES
 HAVE_DOT               = YES
-EXTRACT_ALL            = YES
 USE_MATHJAX            = YES
+EXTRACT_ALL            = NO
 EXTRACT_STATIC         = YES
 SHORT_NAMES            = YES
 INLINE_GROUPED_CLASSES = YES
 INLINE_SIMPLE_STRUCTS  = YES
 TYPEDEF_HIDES_STRUCT   = YES
-SOURCE_BROWSER         = YES
+SOURCE_BROWSER         = NO
 VERBATIM_HEADERS       = NO
+SHOW_FILES             = NO
 PREDEFINED             = DOXYGEN=
 PLANTUML_JAR_PATH      = $(PLANTUML_JAR_PATH)
 PLANTUML_CFG_FILE      =
 PLANTUML_INCLUDE_PATH  =
 OUTPUT_LANGUAGE        = English
-INPUT                  = README.md src
-USE_MDFILE_AS_MAINPAGE = README.md
+INPUT                  = src
 MARKDOWN_ID_STYLE      = GITHUB
 ALIASES               += startjson=@startuml{json}
 ALIASES               += endjson=@enduml

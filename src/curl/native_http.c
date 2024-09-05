@@ -220,3 +220,49 @@ void native_http_install(lua_State* L) {
 void native_http_cleanup(lua_State* L) {
     curl_global_cleanup();
 }
+
+
+#ifdef DOXYGEN
+/**
+ * @defgroup api
+ * @{
+ */
+
+/**
+ * @short @c std.http.get
+ * @par Lua definition
+ * @code
+ * local native_dict_http = {
+ *  handler = function (self) end
+ * }
+ * @endcode
+ */
+class native_dict_http {
+public:
+    /**
+     * @pre @c self.speed must be @c '_fast' or @c ''
+     * @pre @c self.method must be @c 'GET' @c 'HEAD' @c 'POST' @c 'PUT' @c 'DELETE' or @c 'PATCH'
+     * @param[in, out] self @c dict
+     * @code
+     * local self = {
+     *   url = '', 
+     *   speed = '',
+     *   method = '',
+     *   body_content = '',
+     *   param_dict = {},
+     *   header_dict = {},
+     *   set = function(key, value) end,
+     *   promise = function () end,
+     *   resolve = function () end
+     * }
+     *
+     * @endcode
+     */
+    int handler(lua_State* L);
+};
+
+/**
+ * @}
+ */
+
+#endif
