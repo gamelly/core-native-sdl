@@ -40,7 +40,25 @@ if(NOT EXISTS ${ZIG_CC})
     file(CHMOD ${ZIG_CC} FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ)
     file(CHMOD ${ZIG_CXX} FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ)
 endif()
-find_program(ZIGC zig PATHS "${CMAKE_SOURCE_DIR}/vendor/zig" REQUIRED)
+find_program(ZIGC zig PATHS "${CMAKE_SOURCE_DIR}/vendor/zig" REQUIRED NO_DEFAULT_PATH)
+
+# Vim xxd
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/xxd")
+    FetchContent_Declare(
+        exe_vim_xxd
+        GIT_REPOSITORY https://github.com/ckormanyos/xxd
+        GIT_TAG v1.2
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/xxd"
+        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/xxd-subbuild"
+        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/xxd-build"
+    )
+    FetchContent_MakeAvailable(exe_vim_xxd)
+    execute_process(
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/xxd"
+        COMMAND ${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc src/xxd.c -o xxd
+    )
+endif()
+find_program(XXD xxd PATHS "${CMAKE_SOURCE_DIR}/vendor/xxd" REQUIRED NO_DEFAULT_PATH)
 
 # Font
 set(TIRESIAS_FONT_URL "https://github.com/jgrande/ginga/raw/master/tool/ginga/fonts/Tiresias.ttf")
@@ -50,7 +68,7 @@ if(NOT EXISTS ${TIRESIAS_HEADER_PATH})
     file(DOWNLOAD ${TIRESIAS_FONT_URL} ${TIRESIAS_FONT_PATH} SHOW_PROGRESS)
     execute_process(
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/tiresias"
-        COMMAND xxd -i Tiresias.ttf
+        COMMAND ${XXD} -i Tiresias.ttf
         RESULT_VARIABLE result
         OUTPUT_VARIABLE output
         ERROR_VARIABLE error
@@ -105,7 +123,7 @@ if(NOT EXISTS ${ENGINE_HEADER})
     file(COPY_FILE "${CMAKE_SOURCE_DIR}/vendor/engine/dist/main.lua" "${ENGINE_BYTECODE}")
     execute_process(
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor"
-        COMMAND  xxd -i engine/bytecode.lua
+        COMMAND  ${XXD} -i engine/bytecode.lua
         RESULT_VARIABLE result
         OUTPUT_VARIABLE output
         ERROR_VARIABLE error
@@ -127,7 +145,7 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/game")
         file(COPY_FILE "${GAME}" "${GAME_BYTECODE}")
         execute_process(
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor"
-            COMMAND  xxd -i game/bytecode.lua
+            COMMAND  ${XXD} -i game/bytecode.lua
             RESULT_VARIABLE result
             OUTPUT_VARIABLE output
             ERROR_VARIABLE error
