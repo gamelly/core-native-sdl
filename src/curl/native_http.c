@@ -240,6 +240,11 @@ void native_http_cleanup(lua_State* L) {
 class native_dict_http {
 public:
     /**
+     * @brief supports HTTPS
+     * @warning TLS 1.3 is not supported.
+     */ 
+    bool https = true;
+    /**
      * @pre @c self.speed must be @c '_fast' or @c ''
      * @pre @c self.method must be @c 'GET' @c 'HEAD' @c 'POST' @c 'PUT' @c 'DELETE' or @c 'PATCH'
      * @param[in, out] self @c dict
