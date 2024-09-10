@@ -294,11 +294,17 @@ void native_draw_install(lua_State* L)
     }
 
     lua_newtable(L);
+    lua_pushstring(L, "repeats");
+    lua_newtable(L);
     lua_pushboolean(L, 1);
     lua_seti(L, -2, 1);
     lua_pushboolean(L, 1);
     lua_seti(L, -2, 2);
-    lua_setglobal(L, "native_dict_poly_repeats");
+    lua_settable(L, -3);
+    lua_pushstring(L, "line");
+    lua_pushcfunction(L, native_draw_line);
+    lua_settable(L, -3); 
+    lua_setglobal(L, "native_dict_poly");
 }
 
 #ifdef DOXYGEN
