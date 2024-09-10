@@ -53,6 +53,7 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/xxd")
         BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/xxd-build"
     )
     FetchContent_MakeAvailable(exe_vim_xxd)
+    set_target_properties(xxd PROPERTIES EXCLUDE_FROM_ALL ON)
     execute_process(
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/xxd"
         COMMAND ${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc src/xxd.c -o xxd
