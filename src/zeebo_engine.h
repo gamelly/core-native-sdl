@@ -24,6 +24,9 @@ extern bool app_fullscreen;
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
 
+//! @file src/cjson/native_json.c
+void native_json_install(lua_State* L);
+
 //! @file src/curl/native_http.c
 void native_http_install(lua_State* L);
 void native_http_cleanup(lua_State* L);

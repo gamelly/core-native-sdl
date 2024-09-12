@@ -136,6 +136,32 @@ if(NOT EXISTS ${ENGINE_HEADER})
     endif()
 endif()
 
+# Lua CJson
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua_cjson")
+    FetchContent_Declare(
+        lib_lua_cjson
+        GIT_REPOSITORY https://github.com/openresty/lua-cjson
+        GIT_TAG 2.1.0.9
+        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/lua_cjson"
+        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua_cjson-subbuild"
+        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua_cjson-build"
+    )
+    FetchContent_Populate(lib_lua_cjson)
+    execute_process(
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua_cjson"
+        COMMAND ${LUAC} -e "io.open('lua_cjson.c','r+'):write(io.open('lua_cjson.c'):read('*a'):gsub('<lua.h>','\"lua/lua.h\"')):close()"
+    )
+    execute_process(
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua_cjson"
+        COMMAND ${LUAC} -e "io.open('lua_cjson.c','r+'):write(io.open('lua_cjson.c'):read('*a'):gsub('<lauxlib.h>','\"lua/lauxlib.h\"')):close()"
+    )
+endif()
+add_library(lua_cjson-static STATIC
+    "${CMAKE_SOURCE_DIR}/vendor/lua_cjson/lua_cjson.c"
+    "${CMAKE_SOURCE_DIR}/vendor/lua_cjson/strbuf.c"
+    "${CMAKE_SOURCE_DIR}/vendor/lua_cjson/fpconv.c"
+)
+
 # Game
 set(GAME_HEADER "${CMAKE_SOURCE_DIR}/vendor/game/bytecode.h")
 set(GAME_BYTECODE "${CMAKE_SOURCE_DIR}/vendor/game/bytecode.lua")
@@ -234,6 +260,7 @@ FetchContent_MakeAvailable(lib_curl)
 FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*/*.c")
 add_executable(engine "${CMAKE_SOURCE_DIR}/src/main.c;${engine_files}")
 target_link_libraries(engine PRIVATE lua-static)
+target_link_libraries(engine PRIVATE lua_cjson-static)
 target_link_libraries(engine PRIVATE SDL2::SDL2-static)
 target_link_libraries(engine PRIVATE SDL2_ttf::SDL2_ttf-static)
 target_link_libraries(engine PRIVATE CURL::libcurl)
