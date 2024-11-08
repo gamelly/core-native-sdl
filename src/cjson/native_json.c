@@ -1,4 +1,4 @@
-#include "zeebo_engine.h"
+#include "zeebo.h"
 
 extern int luaopen_cjson(lua_State* L);
 

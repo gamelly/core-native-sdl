@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 set(CMAKE_C_COMPILER_WORKS TRUE)
 set(CMAKE_CXX_COMPILER_WORKS TRUE)
 
-project(CoreEngineSDL C)
+project(game C)
 include(FetchContent)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -14,9 +14,10 @@ include_directories("${CMAKE_SOURCE_DIR}/vendor")
 
 # Zig
 set(ZIG_VERSION "0.13.0")
+set(ZIG_DIR "${CMAKE_SOURCE_DIR}/vendor/zig")
 set(ZIG_DOWNLOAD "http://ziglang.org/download")
-set(ZIG_CC "${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc")
-set(ZIG_CXX "${CMAKE_SOURCE_DIR}/vendor/zig/zig_cxx")
+set(ZIG_CC "${ZIG_DIR}/zig_cc")
+set(ZIG_CXX "${ZIG_DIR}/zig_cxx")
 #set(CMAKE_C_COMPILER ${ZIG_CC} CACHE BOOL "" FORCE) -- TODO: make work
 #set(CMAKE_CXX_COMPILER ${ZIG_CXX} CACHE BOOL "" FORCE)
 if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Darwin")
@@ -28,166 +29,139 @@ elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
     set(ZIG_DOWNLOAD "${ZIG_DOWNLOAD}/${ZIG_VERSION}/zig-windows-${CMAKE_HOST_SYSTEM_PROCESSOR}-${ZIG_VERSION}.zip")
 endif()
 if(NOT EXISTS ${ZIG_CC})
-    FetchContent_Populate(
-        compiler_zig
-        URL "${ZIG_DOWNLOAD}"
-        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/zig"
-        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/zig-subbuild"
-        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/zig-build"
-    )
-    file(WRITE ${ZIG_CC} "#!/bin/sh\n${CMAKE_SOURCE_DIR}/vendor/zig/zig cc \$@\n")
-    file(WRITE ${ZIG_CXX} "#!/bin/sh\n${CMAKE_SOURCE_DIR}/vendor/zig/zig c++ \$@\n")
+    FetchContent_Populate(dep_zig URL ${ZIG_DOWNLOAD} SOURCE_DIR ${ZIG_DIR})
+    file(WRITE ${ZIG_CC} "#!/bin/sh\n${ZIG_DIR}/zig cc \$@\n")
+    file(WRITE ${ZIG_CXX} "#!/bin/sh\n${ZIG_DIR}/zig c++ \$@\n")
     file(CHMOD ${ZIG_CC} FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ)
     file(CHMOD ${ZIG_CXX} FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ)
 endif()
-find_program(ZIGC zig PATHS "${CMAKE_SOURCE_DIR}/vendor/zig" REQUIRED NO_DEFAULT_PATH)
-
-# Vim xxd
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/xxd")
-    FetchContent_Declare(
-        exe_vim_xxd
-        GIT_REPOSITORY https://github.com/ckormanyos/xxd
-        GIT_TAG v1.2
-        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/xxd"
-        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/xxd-subbuild"
-        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/xxd-build"
-    )
-    FetchContent_MakeAvailable(exe_vim_xxd)
-    set_target_properties(xxd PROPERTIES EXCLUDE_FROM_ALL ON)
-    execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/xxd"
-        COMMAND ${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc src/xxd.c -o xxd
-    )
-endif()
-find_program(XXD xxd PATHS "${CMAKE_SOURCE_DIR}/vendor/xxd" REQUIRED NO_DEFAULT_PATH)
-
-# Font
-set(TIRESIAS_FONT_URL "https://github.com/jgrande/ginga/raw/master/tool/ginga/fonts/Tiresias.ttf")
-set(TIRESIAS_FONT_PATH "${CMAKE_SOURCE_DIR}/vendor/tiresias/Tiresias.ttf")
-set(TIRESIAS_HEADER_PATH "${CMAKE_SOURCE_DIR}/vendor/tiresias/font.h")
-if(NOT EXISTS ${TIRESIAS_HEADER_PATH})
-    file(DOWNLOAD ${TIRESIAS_FONT_URL} ${TIRESIAS_FONT_PATH} SHOW_PROGRESS)
-    execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/tiresias"
-        COMMAND ${XXD} -i Tiresias.ttf
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE output
-        ERROR_VARIABLE error
-    )
-    if(result EQUAL 0)
-        file(WRITE ${TIRESIAS_HEADER_PATH} "${output}")
-    else()
-        message(FATAL_ERROR "Failed to execute xxd tiresias: ${error}")
-    endif()
-endif()
+find_program(ZIGC zig PATHS ${ZIG_DIR} REQUIRED NO_DEFAULT_PATH)
 
 # Lua
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua/lua")
-    FetchContent_Declare(
-        lib_lua
-        GIT_REPOSITORY https://github.com/lua/lua
-        GIT_TAG v5.4.7
-        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/lua"
-        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-subbuild"
-        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua-build"
-    )
-    FetchContent_MakeAvailable(lib_lua)
+set(LUA_VERSION "5.4.7")
+set(LUA_DIR "${CMAKE_SOURCE_DIR}/vendor/lua")
+set(LUA_DOWNLOAD "https://github.com/lua/lua/archive/refs/tags/v${LUA_VERSION}.tar.gz")
+if(NOT EXISTS ${LUA_DIR})
+    FetchContent_Populate(dep_lua URL "${LUA_DOWNLOAD}" SOURCE_DIR ${LUA_DIR})
     execute_process(
-        COMMAND make CC=${CMAKE_SOURCE_DIR}/vendor/zig/zig_cc MYCFLAGS="-std=c99" MYLIBS="" 
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua"
+        COMMAND make CC=${ZIG_DIR}/zig_cc MYCFLAGS="-std=c99" MYLIBS="" 
+        WORKING_DIRECTORY ${LUA_DIR}
     )
 endif()
-add_library(lua-static STATIC IMPORTED)
-set_target_properties(lua-static PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/vendor/lua/liblua.a"
-)
-find_program(LUAC lua PATHS "${CMAKE_SOURCE_DIR}/vendor/lua" REQUIRED)
+file(GLOB lua_files "${LUA_DIR}/*.c")
+list(REMOVE_ITEM lua_files "${LUA_DIR}/lua.c")
+list(REMOVE_ITEM lua_files "${LUA_DIR}/onelua.c")
+add_library(lua-static STATIC ${lua_files})
+find_program(LUAC lua PATHS ${LUA_DIR} REQUIRED NO_DEFAULT_PATH)
 
 # Engine
-set(ENGINE_HEADER "${CMAKE_SOURCE_DIR}/vendor/engine/bytecode.h")
-set(ENGINE_BYTECODE "${CMAKE_SOURCE_DIR}/vendor/engine/bytecode.lua")
+set(ENGINE_VERSION "0.0.12")
+set(ENGINE_DIR "${CMAKE_SOURCE_DIR}/vendor/engine")
+set(ENGINE_CLI "${ENGINE_DIR}/src/cli/main.lua")
+set(ENGINE_DOWNLOAD "https://github.com/gamelly/gly-engine/archive/refs/tags/${ENGINE_VERSION}.tar.gz")
+set(ENGINE_HEADER "${ENGINE_DIR}/bytecode.h")
 if(NOT EXISTS ${ENGINE_HEADER})
-    FetchContent_Declare(
-        lib_engine
-        GIT_REPOSITORY https://github.com/RodrigoDornelles/codename-videogame-engine
-        GIT_TAG develop
-        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/engine"
-        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-subbuild"
-        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/engine-build"
-    )
-    FetchContent_MakeAvailable(lib_engine)
-    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine/dist")
+    FetchContent_Populate(dep_engine URL ${ENGINE_DOWNLOAD} SOURCE_DIR ${ENGINE_DIR})
+    file(MAKE_DIRECTORY "${ENGINE_DIR}/lite")
+    file(MAKE_DIRECTORY "${ENGINE_DIR}/native")
+    file(MAKE_DIRECTORY "${ENGINE_DIR}/examples/template")
     execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
-        COMMAND ${LUAC} src/cli/main.lua build --core native --bundler
+        WORKING_DIRECTORY ${ENGINE_DIR}
+        COMMAND ${LUAC} ${ENGINE_CLI} build --core lite --bundler --dist ${ENGINE_DIR}/lite/
+        COMMAND_ERROR_IS_FATAL ANY
     )
-    file(COPY_FILE "${CMAKE_SOURCE_DIR}/vendor/engine/dist/main.lua" "${ENGINE_BYTECODE}")
     execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor"
-        COMMAND  ${XXD} -i engine/bytecode.lua
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE output
-        ERROR_VARIABLE error
+        WORKING_DIRECTORY ${ENGINE_DIR}
+        COMMAND ${LUAC} ${ENGINE_CLI} build --core native --bundler --dist ${ENGINE_DIR}/native/
+        COMMAND_ERROR_IS_FATAL ANY
     )
-    if(result EQUAL 0)
-        file(WRITE ${ENGINE_HEADER} "${output}")
-    else()
-        message(FATAL_ERROR "Failed to execute xxd engine: ${error}")
+    execute_process(
+        WORKING_DIRECTORY ${ENGINE_DIR}
+        COMMAND ${LUAC} ${ENGINE_CLI} tool-template-fill ${ENGINE_DIR}/examples/template/game.lua 204800
+    )
+    set(ENGINE "@native")
+endif()
+if(DEFINED ENGINE)
+    if (ENGINE MATCHES "^\\@")
+        string(SUBSTRING "${ENGINE}" 1 -1 ENGINE)
+        set(ENGINE "${ENGINE_DIR}/${ENGINE}/main.lua")
     endif()
+    if(NOT EXISTS ${ENGINE})
+        message(FATAL_ERROR "engine not found: ${ENGINE}")
+    endif()
+    get_filename_component(ENGINE "${ENGINE}" ABSOLUTE)
+    execute_process(
+        WORKING_DIRECTORY ${ENGINE_DIR}
+        COMMAND ${LUAC} ${ENGINE_CLI} fs-xxd-i ${ENGINE} ${ENGINE_HEADER} --const --name engine_bytecode_lua
+        COMMAND_ERROR_IS_FATAL ANY
+    )
 endif()
 
 # Lua CJson
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/lua_cjson")
-    FetchContent_Declare(
-        lib_lua_cjson
-        GIT_REPOSITORY https://github.com/openresty/lua-cjson
-        GIT_TAG 2.1.0.9
-        SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/lua_cjson"
-        SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua_cjson-subbuild"
-        BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/lua_cjson-build"
-    )
-    FetchContent_Populate(lib_lua_cjson)
+set(LUACJSON_VERSION "2.1.0.9")
+set(LUACJSON_DIR "${CMAKE_SOURCE_DIR}/vendor/lua_cjson")
+set(LUACJSON_FILE "${LUACJSON_DIR}/lua_cjson.c")
+set(LUACJSON_DOWNLOAD "https://github.com/openresty/lua-cjson/archive/refs/tags/${LUACJSON_VERSION}.tar.gz")
+if(NOT EXISTS ${LUACJSON_FILE})
+    FetchContent_Populate(dep_cjson_lua URL ${LUACJSON_DOWNLOAD} SOURCE_DIR ${LUACJSON_DIR})
     execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua_cjson"
-        COMMAND ${LUAC} -e "io.open('lua_cjson.c','r+'):write(io.open('lua_cjson.c'):read('*a'):gsub('<lua.h>','\"lua/lua.h\"')):close()"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
+        COMMAND ${LUAC} ${ENGINE_CLI} fs-replace ${LUACJSON_FILE} ${LUACJSON_FILE}
+            --format "<lua.h>" --replace "\"lua/lua.h\""
+        COMMAND_ERROR_IS_FATAL ANY
     )
     execute_process(
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/lua_cjson"
-        COMMAND ${LUAC} -e "io.open('lua_cjson.c','r+'):write(io.open('lua_cjson.c'):read('*a'):gsub('<lauxlib.h>','\"lua/lauxlib.h\"')):close()"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/engine"
+        COMMAND ${LUAC} ${ENGINE_CLI} fs-replace ${LUACJSON_FILE} ${LUACJSON_FILE}
+            --format "<lauxlib.h>" --replace "\"lua/lauxlib.h\""
+        COMMAND_ERROR_IS_FATAL ANY
     )
 endif()
-add_library(lua_cjson-static STATIC
-    "${CMAKE_SOURCE_DIR}/vendor/lua_cjson/lua_cjson.c"
-    "${CMAKE_SOURCE_DIR}/vendor/lua_cjson/strbuf.c"
-    "${CMAKE_SOURCE_DIR}/vendor/lua_cjson/fpconv.c"
-)
+add_library(lua_cjson-static STATIC "${LUACJSON_DIR}/lua_cjson.c;${LUACJSON_DIR}/strbuf.c;${LUACJSON_DIR}/fpconv.c")
+
+# Font
+set(FONT_DIR "${CMAKE_SOURCE_DIR}/vendor/font")
+set(FONT_DOWNLOAD "https://github.com/gamelly/fonts/archive/refs/heads/main.tar.gz")
+if(NOT EXISTS "${FONT_DIR}")
+    FetchContent_Populate(dep_font URL ${FONT_DOWNLOAD} SOURCE_DIR ${FONT_DIR})
+    set(FONT_NOTO "${FONT_DIR}/Noto_Sans")
+    execute_process(
+    WORKING_DIRECTORY ${ENGINE_DIR}
+        COMMAND ${LUAC} ${ENGINE_CLI} fs-xxd-i --const --name notosans_regular_ttf
+            ${FONT_NOTO}/NotoSans-Regular.ttf
+            ${FONT_NOTO}/notosans_regular.h 
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+endif()
 
 # Game
+string(LENGTH "${GAME}" GAME_LENGTH)
 set(GAME_HEADER "${CMAKE_SOURCE_DIR}/vendor/game/bytecode.h")
-set(GAME_BYTECODE "${CMAKE_SOURCE_DIR}/vendor/game/bytecode.lua")
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/game")
-    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/game")
-    string(LENGTH "${GAME}" GAME_LENGTH)
-    if(DEFINED GAME AND GAME_LENGTH)
-        file(COPY_FILE "${GAME}" "${GAME_BYTECODE}")
-        execute_process(
-            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor"
-            COMMAND  ${XXD} -i game/bytecode.lua
-            RESULT_VARIABLE result
-            OUTPUT_VARIABLE output
-            ERROR_VARIABLE error
-        )
-        if(result EQUAL 0)
-            file(WRITE ${GAME_HEADER} "${output}")
-        else()
-            message(FATAL_ERROR "Failed to execute xxd game: ${error}")
-        endif()
-    else()
-        file(WRITE ${GAME_HEADER} "unsigned char* game_bytecode_lua = NULL;\nunsigned int game_bytecode_lua_len = 0;")
+if (DEFINED GAME AND GAME_LENGTH AND GAME MATCHES "^\\@")
+    string(SUBSTRING "${GAME}" 1 -1 GAME)
+    set(GAME "${ENGINE_DIR}/examples/${GAME}/game.lua")
+endif()
+if ((NOT DEFINED GAME AND NOT EXISTS ${GAME_HEADER}) OR (DEFINED GAME AND NOT GAME_LENGTH))
+    file(WRITE ${GAME_HEADER} "unsigned char* game_bytecode_lua = NULL;\nunsigned int game_bytecode_lua_len = 0;")
+endif()
+if(DEFINED GAME AND GAME_LENGTH)
+    if(NOT EXISTS ${GAME})
+        message(FATAL_ERROR "game not found: ${GAME}")
     endif()
+    get_filename_component(GAME "${GAME}" ABSOLUTE)
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/game")
+    execute_process(
+        WORKING_DIRECTORY ${ENGINE_DIR}
+        COMMAND ${LUAC} src/cli/main.lua fs-xxd-i ${GAME} ${GAME_HEADER} --const --name game_bytecode_lua
+        COMMAND_ERROR_IS_FATAL ANY
+    )
 endif()
 
 # SDL
+set(SDL_VERSION "2.30.6")
+set(SDLTTF_VERSION "2.22.0")
+set(SDL_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL")
+set(SDLTTF_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL_ttf")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(SDL2_TEST OFF CACHE BOOL "" FORCE)
 set(SDL2_SHARED OFF CACHE BOOL "" FORCE)
@@ -197,44 +171,43 @@ set(SDL2TTF_HARFBUZZ OFF CACHE BOOL "" FORCE)
 set(SDL2TTF_INSTALL OFF CACHE BOOL "" FORCE)
 set(SDL2TTF_SAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
-    lib_sdl2
+    dep_sdl2
     GIT_REPOSITORY https://github.com/libsdl-org/SDL
-    GIT_TAG release-2.30.6
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-build"
+    GIT_TAG "release-${SDL_VERSION}"
+    SOURCE_DIR ${SDL_DIR}
 )
 FetchContent_Declare(
-    lib_sdl2_ttf
+    dep_ttf_sdl2
     GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf
-    GIT_TAG release-2.22.0
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/SDL_ttf"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-ttf-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/sdl2-ttf-build"
+    GIT_TAG "release-${SDLTTF_VERSION}"
+    SOURCE_DIR ${SDLTTF_DIR}
 )
-FetchContent_MakeAvailable(lib_sdl2 lib_sdl2_ttf)
+FetchContent_MakeAvailable(dep_sdl2 dep_ttf_sdl2)
 
 # Bear SSL
+set(BEARSSL_VERSION "0.6")
+set(BEARSSL_DIR "${CMAKE_SOURCE_DIR}/vendor/bearssl")
 set(USE_LIBIDN2 OFF CACHE BOOL "" FORCE)
 set(BEARSSL_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/vendor/bearssl/inc")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/vendor/bearssl/build;${CMAKE_PREFIX_PATH}")
 FetchContent_Declare(
-    lib_bearssl
+    dep_bearssl
     GIT_REPOSITORY https://www.bearssl.org/git/BearSSL
-    GIT_TAG v0.6
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/bearssl"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/bearssl-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/bearssl-build"
+    GIT_TAG "v${BEARSSL_VERSION}"
+    SOURCE_DIR ${BEARSSL_DIR}
 )
-FetchContent_MakeAvailable(lib_bearssl)
-if (NOT EXISTS "${CMAKE_SOURCE_DIR}/vendor/bearssl/build/libbearssl.a")
+FetchContent_MakeAvailable(dep_bearssl)
+if (NOT EXISTS "${BEARSSL_DIR}/build/libbearssl.a")
     execute_process(
         COMMAND make build/libbearssl.a
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/vendor/bearssl"
+        WORKING_DIRECTORY ${BEARSSL_DIR}
+        COMMAND_ERROR_IS_FATAL ANY
     )
 endif()
 
 # Curl
+set(CURL_VERSION "8_9_1")
+set(CURL_DIR "${CMAKE_SOURCE_DIR}/vendor/curl")
 set(HTTP_ONLY ON CACHE BOOL "" FORCE)
 set(PICKY_COMPILER OFF CACHE BOOL "" FORCE)
 set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
@@ -248,19 +221,17 @@ set(CURL_USE_BEARSSL ON CACHE BOOL "" FORCE)
 set(CURL_USE_LIBPSL OFF CACHE BOOL "" FORCE)
 set(CURL_USE_LIBSSH2 OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
-    lib_curl
+    dep_curl
     GIT_REPOSITORY https://github.com/curl/curl
     GIT_TAG curl-8_9_1
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/vendor/curl"
-    SUBBUILD_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/curl-subbuild"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/_deps/curl-build"
+    SOURCE_DIR ${CURL_DIR}
 )
-FetchContent_MakeAvailable(lib_curl)
+FetchContent_MakeAvailable(dep_curl)
 
 FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*/*.c")
-add_executable(engine "${CMAKE_SOURCE_DIR}/src/main.c;${engine_files}")
-target_link_libraries(engine PRIVATE lua-static)
-target_link_libraries(engine PRIVATE lua_cjson-static)
-target_link_libraries(engine PRIVATE SDL2::SDL2-static)
-target_link_libraries(engine PRIVATE SDL2_ttf::SDL2_ttf-static)
-target_link_libraries(engine PRIVATE CURL::libcurl)
+add_executable(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/src/main.c;${engine_files}")
+target_link_libraries(${PROJECT_NAME} PRIVATE lua-static)
+target_link_libraries(${PROJECT_NAME} PRIVATE lua_cjson-static)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2-static)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2_ttf::SDL2_ttf-static)
+target_link_libraries(${PROJECT_NAME} PRIVATE CURL::libcurl)

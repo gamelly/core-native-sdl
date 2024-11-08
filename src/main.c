@@ -1,4 +1,4 @@
-#include "zeebo_engine.h"
+#include "zeebo.h"
 
 int app_width = 648;
 int app_height = 480;

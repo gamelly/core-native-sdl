@@ -1,5 +1,5 @@
-#include "zeebo_engine.h"
-#include "tiresias/font.h"
+#include "zeebo.h"
+#include "font/Noto_Sans/notosans_regular.h"
 
 //! @cond
 static TTF_Font* font = NULL;
@@ -25,7 +25,7 @@ static int native_draw_flush(lua_State *L) {
  * @param[in] color @c int
  */
 static int native_draw_clear(lua_State *L) {
-    assert(lua_gettop(L) == 1);
+    assert(lua_gettop(L) == 5);
 
     int color_new = luaL_checkinteger(L, 1);
     SDL_SetRenderDrawColor(renderer,
@@ -35,11 +35,16 @@ static int native_draw_clear(lua_State *L) {
         (color_new) & 0xFF
     );
 
-    SDL_FRect rect = {0, 0, app_width, app_height};
+    SDL_FRect rect = {
+        luaL_checknumber(L, 2),
+        luaL_checknumber(L, 3),
+        luaL_checknumber(L, 4),
+        luaL_checknumber(L, 5)
+    };
 
     SDL_RenderFillRectF(renderer, &rect);
 
-    lua_pop(L, 1);
+    lua_pop(L, 5);
 
     return 0;
 }
@@ -174,7 +179,7 @@ static int native_draw_font(lua_State *L) {
         }
 
         if (rw == NULL) {
-            rw = SDL_RWFromConstMem(Tiresias_ttf, Tiresias_ttf_len);
+            rw = SDL_RWFromConstMem(notosans_regular_ttf, notosans_regular_ttf_len);
         }
 
         if (rw == NULL) {
@@ -191,6 +196,11 @@ static int native_draw_font(lua_State *L) {
     }
     while(0);
 
+    return 0;
+}
+
+static int native_draw_text_tui(lua_State *L)
+{
     return 0;
 }
 
@@ -284,7 +294,8 @@ void native_draw_install(lua_State* L)
         {"native_draw_rect", native_draw_rect},
         {"native_draw_line", native_draw_line},
         {"native_draw_font", native_draw_font},
-        {"native_draw_text", native_draw_text}
+        {"native_draw_text", native_draw_text},
+        {"native_draw_text_tui", native_draw_text_tui}
     };
 
     while(i < sizeof(lib)/sizeof(luaL_Reg)) {

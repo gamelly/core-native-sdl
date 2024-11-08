@@ -1,4 +1,4 @@
-#include "zeebo_engine.h"
+#include "zeebo.h"
 
 static const char *get_key(SDL_Keycode key) {
     switch(key) {
@@ -6,11 +6,11 @@ static const char *get_key(SDL_Keycode key) {
         case SDLK_DOWN: return "down";
         case SDLK_LEFT: return "left";
         case SDLK_RIGHT: return "right";
-        case SDLK_z: return "red";
-        case SDLK_x: return "green";
-        case SDLK_c: return "yellow";
-        case SDLK_v: return "blue";
-        case SDLK_RETURN: return "enter";
+        case SDLK_z: return "a";
+        case SDLK_x: return "b";
+        case SDLK_c: return "c";
+        case SDLK_v: return "d";
+        case SDLK_RETURN: return "a";
     }
    return "_";
 }

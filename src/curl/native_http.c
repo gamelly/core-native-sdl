@@ -1,4 +1,4 @@
-#include "zeebo_engine.h"
+#include "zeebo.h"
 #include "curl/include/curl/curl.h"
 
 static bool curl_add_method_and_body(lua_State *L, CURL *curl)

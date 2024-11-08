@@ -1,7 +1,7 @@
 # Custom Configs
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "Native SDL Core"
-PROJECT_NUMBER         = 0.0.6
+PROJECT_NUMBER         = 0.0.12
 PROJECT_BRIEF          = "create your own game-engine with just lua."
 PROJECT_LOGO           = 
 OUTPUT_DIRECTORY       = .

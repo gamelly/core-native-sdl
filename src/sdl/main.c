@@ -1,4 +1,4 @@
-#include "zeebo_engine.h"
+#include "zeebo.h"
 #include "engine/bytecode.h"
 #include "game/bytecode.h"
 
@@ -69,6 +69,8 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
         status = 0;
         bool running = true;
         while (running) {
+            static unsigned long ticks = 0;
+            unsigned long new_ticks = SDL_GetTicks();
             if (!native_event_pool(L)) {
                 running = false;
             }
@@ -76,7 +78,7 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
             status = 1;
 
             lua_getglobal(L, "native_callback_loop");
-            lua_pushnumber(L, SDL_GetTicks());
+            lua_pushnumber(L, new_ticks - ticks);
             if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
                 fprintf(stderr, "Lua Game loop error: %s\n", lua_tostring(L, -1));
                 break;
@@ -89,6 +91,7 @@ int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name) {
             }
 
             status = 0;
+            ticks = new_ticks;
 
             SDL_Delay(16);
         }
