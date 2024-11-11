@@ -35,6 +35,15 @@ static void engine_draw() {
     lua_pcall(L, 0, 0, 0);
 }
 
+void engine_keypress(const char *const key, uint8_t value)
+{
+    lua_State *L = lua();
+    lua_getglobal(L, "native_callback_keyboard");
+    lua_pushstring(L, key);
+    lua_pushinteger(L, value);
+    lua_pcall(L, 2, 0, 0);
+}
+
 void engine_install() {
     kernel_event_install(KERNEL_EVENT_INIT, engine_init);
     kernel_event_install(KERNEL_EVENT_UPDATE, engine_loop);

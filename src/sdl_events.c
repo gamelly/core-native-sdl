@@ -4,6 +4,21 @@
 SDL_Window *window;
 SDL_Renderer *renderer;
 
+static const char *sdl_keybinding(SDL_Keycode key) {
+    switch(key) {
+        case SDLK_UP: return "up";
+        case SDLK_DOWN: return "down";
+        case SDLK_LEFT: return "left";
+        case SDLK_RIGHT: return "right";
+        case SDLK_z: return "a";
+        case SDLK_x: return "b";
+        case SDLK_c: return "c";
+        case SDLK_v: return "d";
+        case SDLK_RETURN: return "a";
+    }
+   return "_";
+}
+
 static void sdl_init() {
     if (kernel_has_error()) {
         return;
@@ -60,6 +75,12 @@ static void sdl_event_pool() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             kernel_runtime_quit();
+        }
+        else if (event.type == SDL_KEYDOWN) {
+            engine_keypress(sdl_keybinding(event.key.keysym.sym), 1);
+        }
+        else if (event.type == SDL_KEYUP) {
+            engine_keypress(sdl_keybinding(event.key.keysym.sym), 0);
         }
     }
 }

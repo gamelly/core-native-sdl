@@ -25,6 +25,7 @@ void kernel_exit();
 
 //! @file src/engine_event.c
 void engine_install();
+void engine_keypress(const char *const , uint8_t);
 
 //! @file src/kernel_error.c
 void kernel_add_error(const char*);
