@@ -1,4 +1,4 @@
-#include "zeebo_engine.h"
+#include "zeebo.h"
 
 int lua_main(lua_State *L, char *file_name)
 {

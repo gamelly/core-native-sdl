@@ -1,11 +1,11 @@
 # core-native-sdl
 
- * a native core for <https://github.com/RodrigoDornelles/codename-videogame-engine>
+ * a native core for <https://github.com/gamelly/gly-engine>
 
 ## How to build
 
 ```bash
-git clone
+git clone https://github.com/gamelly/core-native-sdl
 ```
 
 ```bash
@@ -19,5 +19,5 @@ make -C build
 ## How to run
 
 ```bash
-./build/bin/engine -g vendor/engine/examples/asteroids/game.lua
+./build/bin/game -g vendor/engine/examples/asteroids/game.lua
 ```

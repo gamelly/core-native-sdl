@@ -1,4 +1,4 @@
-#include "zeebo_engine.h"
+#include "zeebo.h"
 
 void lua_addPath(lua_State *L, const char* path)
 {
@@ -46,6 +46,7 @@ bool lua_dofileOrBuffer(lua_State *L, const char* buffer, size_t buflen, const c
                 file_len += fread(file_buf + file_len, 1, 4096, file_ptr);
             }
             while(!feof(file_ptr));
+            file_buf[file_len] = '\0';
 
             if (luaL_dostring(L, file_buf) != LUA_OK) {
                 fprintf(stderr, "Lua error: %s\n", lua_tostring(L, -1));

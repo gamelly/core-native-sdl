@@ -1,10 +1,15 @@
-#include "zeebo_engine.h"
-#include "tiresias/font.h"
+#include "zeebo.h"
+#include "font/Noto_Sans/notosans_regular.h"
 
 //! @cond
 static TTF_Font* font = NULL;
 static SDL_Color current_color = {255, 255, 255, 255};
 //! @endcond
+
+/**
+ * @defgroup api
+ * @{
+ */
 
 static int native_draw_start(lua_State *L) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -20,7 +25,7 @@ static int native_draw_flush(lua_State *L) {
  * @param[in] color @c int
  */
 static int native_draw_clear(lua_State *L) {
-    assert(lua_gettop(L) == 1);
+    assert(lua_gettop(L) == 5);
 
     int color_new = luaL_checkinteger(L, 1);
     SDL_SetRenderDrawColor(renderer,
@@ -30,11 +35,16 @@ static int native_draw_clear(lua_State *L) {
         (color_new) & 0xFF
     );
 
-    SDL_FRect rect = {0, 0, app_width, app_height};
+    SDL_FRect rect = {
+        luaL_checknumber(L, 2),
+        luaL_checknumber(L, 3),
+        luaL_checknumber(L, 4),
+        luaL_checknumber(L, 5)
+    };
 
     SDL_RenderFillRectF(renderer, &rect);
 
-    lua_pop(L, 1);
+    lua_pop(L, 5);
 
     return 0;
 }
@@ -169,7 +179,7 @@ static int native_draw_font(lua_State *L) {
         }
 
         if (rw == NULL) {
-            rw = SDL_RWFromConstMem(Tiresias_ttf, Tiresias_ttf_len);
+            rw = SDL_RWFromConstMem(notosans_regular_ttf, notosans_regular_ttf_len);
         }
 
         if (rw == NULL) {
@@ -186,7 +196,7 @@ static int native_draw_font(lua_State *L) {
     }
     while(0);
 
-    return 0;
+        return 0;
 }
 
 /**
@@ -207,7 +217,22 @@ static int native_draw_text(lua_State *L) {
         y = (int) luaL_checknumber(L, 2);
         text = luaL_checkstring(L, 3);
         lua_pop(L, 3);
-    } 
+    } else if (argc == 8 ) {
+        x = (int) luaL_checknumber(L, 1);
+        y = (int) luaL_checknumber(L, 2);
+        int ox = (int)luaL_checknumber(L, 3);
+        int oy = (int)luaL_checknumber(L, 4);
+        int w = (int)luaL_checknumber(L, 5);
+        int h = (int)luaL_checknumber(L, 6);
+        int s = (int)luaL_checknumber(L, 7);
+        text = luaL_checkstring(L, 8);
+        x = ox + ((w/80) * x);
+        y = oy + ((h/24) * y);
+        lua_pop(L, 8);
+    }
+    else {
+        luaL_error(L, "std.draw.text");
+    }
    
     int result = 0;
     int textWidth = 0;
@@ -237,7 +262,7 @@ static int native_draw_text(lua_State *L) {
         }
 
         SDL_QueryTexture(textTexture, NULL, NULL, &textWidth, &textHeight);
-        if (argc == 3) {
+        if (argc == 3 || argc == 8) {
             SDL_Rect destRect = { x, y, textWidth, textHeight };
             SDL_RenderCopy(renderer, textTexture, NULL, &destRect);
         }
@@ -264,7 +289,10 @@ static int native_draw_text(lua_State *L) {
     return result;
 }
 
-//! @cond
+/**
+ * @}
+ */
+
 void native_draw_install(lua_State* L)
 {
     int i = 0;
@@ -276,7 +304,8 @@ void native_draw_install(lua_State* L)
         {"native_draw_rect", native_draw_rect},
         {"native_draw_line", native_draw_line},
         {"native_draw_font", native_draw_font},
-        {"native_draw_text", native_draw_text}
+        {"native_draw_text", native_draw_text},
+        {"native_draw_text_tui", native_draw_text}
     };
 
     while(i < sizeof(lib)/sizeof(luaL_Reg)) {
@@ -286,10 +315,50 @@ void native_draw_install(lua_State* L)
     }
 
     lua_newtable(L);
+    lua_pushstring(L, "repeats");
+    lua_newtable(L);
     lua_pushboolean(L, 1);
     lua_seti(L, -2, 1);
     lua_pushboolean(L, 1);
     lua_seti(L, -2, 2);
-    lua_setglobal(L, "native_dict_poly_repeats");
+    lua_settable(L, -3);
+    lua_pushstring(L, "line");
+    lua_pushcfunction(L, native_draw_line);
+    lua_settable(L, -3); 
+    lua_setglobal(L, "native_dict_poly");
 }
-//! @endcond
+
+#ifdef DOXYGEN
+/**
+ * @defgroup api
+ * @{
+ */
+
+/**
+ * @short @c std.draw.poly
+ * @par Lua definition
+ * @code
+ * local native_dict_poly = {
+ *  repeats = {true, true},
+ *  line = function (x1, y1, x2, y2)
+ *    native_draw_line(x1, y1, x2, y2)
+ *  end
+ * }
+ * @endcode
+ */
+class native_dict_poly {
+public:
+    bool repeats[2] = {true, true};
+    /**
+     * @param[in] x1 @c double
+     * @param[in] y1 @c double
+     * @param[in] x2 @c double
+     * @param[in] y2 @c double
+     */
+    int line(lua_State* L);
+};
+
+/**
+ * @}
+ */
+#endif
