@@ -196,12 +196,7 @@ static int native_draw_font(lua_State *L) {
     }
     while(0);
 
-    return 0;
-}
-
-static int native_draw_text_tui(lua_State *L)
-{
-    return 0;
+        return 0;
 }
 
 /**
@@ -222,7 +217,22 @@ static int native_draw_text(lua_State *L) {
         y = (int) luaL_checknumber(L, 2);
         text = luaL_checkstring(L, 3);
         lua_pop(L, 3);
-    } 
+    } else if (argc == 8 ) {
+        x = (int) luaL_checknumber(L, 1);
+        y = (int) luaL_checknumber(L, 2);
+        int ox = (int)luaL_checknumber(L, 3);
+        int oy = (int)luaL_checknumber(L, 4);
+        int w = (int)luaL_checknumber(L, 5);
+        int h = (int)luaL_checknumber(L, 6);
+        int s = (int)luaL_checknumber(L, 7);
+        text = luaL_checkstring(L, 8);
+        x = ox + ((w/80) * x);
+        y = oy + ((h/24) * y);
+        lua_pop(L, 8);
+    }
+    else {
+        luaL_error(L, "std.draw.text");
+    }
    
     int result = 0;
     int textWidth = 0;
@@ -252,7 +262,7 @@ static int native_draw_text(lua_State *L) {
         }
 
         SDL_QueryTexture(textTexture, NULL, NULL, &textWidth, &textHeight);
-        if (argc == 3) {
+        if (argc == 3 || argc == 8) {
             SDL_Rect destRect = { x, y, textWidth, textHeight };
             SDL_RenderCopy(renderer, textTexture, NULL, &destRect);
         }
@@ -295,7 +305,7 @@ void native_draw_install(lua_State* L)
         {"native_draw_line", native_draw_line},
         {"native_draw_font", native_draw_font},
         {"native_draw_text", native_draw_text},
-        {"native_draw_text_tui", native_draw_text_tui}
+        {"native_draw_text_tui", native_draw_text}
     };
 
     while(i < sizeof(lib)/sizeof(luaL_Reg)) {
