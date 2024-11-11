@@ -1,8 +1,9 @@
-#include "zeebo.h"
 #include "curl/include/curl/curl.h"
+#include "lua.h"
+#include "zeebo.h"
 
-static bool curl_add_method_and_body(lua_State *L, CURL *curl)
-{
+//! @cond
+static bool curl_add_method_and_body(lua_State *L, CURL *curl) {
     bool success = true;
     const char *method = NULL;
     const char *body = NULL;
@@ -21,7 +22,7 @@ static bool curl_add_method_and_body(lua_State *L, CURL *curl)
         if (strcmp(method, "GET") == 0) {
             curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
             break;
-        } 
+        }
 
         if (strcmp(method, "HEAD") == 0) {
             curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
@@ -31,33 +32,28 @@ static bool curl_add_method_and_body(lua_State *L, CURL *curl)
         lua_pushstring(L, "body_content");
         lua_gettable(L, -2);
         body = lua_tostring(L, -1);
-        lua_pop(L, 1); 
+        lua_pop(L, 1);
 
         if (body != NULL && strlen(body) > 0) {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
         }
-        
 
         if (strcmp(method, "POST") == 0) {
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
             break;
-        }
-        else if (strcmp(method, "PUT") == 0) {
+        } else if (strcmp(method, "PUT") == 0) {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
             break;
-        } 
-        else if (strcmp(method, "DELETE") == 0) {
+        } else if (strcmp(method, "DELETE") == 0) {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
             break;
-        }
-        else if (strcmp(method, "PATCH") == 0) {
+        } else if (strcmp(method, "PATCH") == 0) {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
             break;
         }
 
         success = false;
-    }
-    while(0);
+    } while (0);
 
     return success;
 }
@@ -69,7 +65,7 @@ static size_t header_callback(void *contents, size_t size, size_t nmemb, void *u
     lua_State *L = (lua_State *)userp;
 
     do {
-        if (strncmp("HTTP/", (char*) contents, 5) == 0) {
+        if (strncmp("HTTP/", (char *)contents, 5) == 0) {
             memcpy(http_status, contents + 9, sizeof(http_status) - 1);
             status = atoi(http_status);
             lua_pushstring(L, "set");
@@ -85,8 +81,7 @@ static size_t header_callback(void *contents, size_t size, size_t nmemb, void *u
             lua_pcall(L, 2, 0, 0);
             break;
         }
-    }
-    while(0);
+    } while (0);
 
     return total_size;
 }
@@ -94,7 +89,7 @@ static size_t header_callback(void *contents, size_t size, size_t nmemb, void *u
 static size_t http_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t total_size = size * nmemb;
     lua_State *L = (lua_State *)userp;
-    char *body = (char *) malloc(total_size + 1);
+    char *body = (char *)malloc(total_size + 1);
     const char *old_body = NULL;
 
     do {
@@ -110,7 +105,7 @@ static size_t http_callback(void *contents, size_t size, size_t nmemb, void *use
         lua_gettable(L, -2);
         old_body = lua_tostring(L, -1);
         lua_pop(L, 3);
-        
+
         memcpy(body, contents, total_size);
         body[total_size] = '\0';
 
@@ -123,14 +118,13 @@ static size_t http_callback(void *contents, size_t size, size_t nmemb, void *use
             lua_pushstring(L, body);
         }
         lua_pcall(L, 2, 0, 0);
-    }
-    while(0);
+    } while (0);
 
     if (body) {
         free(body);
     }
 
-    return total_size; 
+    return total_size;
 }
 
 static int http_handler(lua_State *L) {
@@ -145,7 +139,7 @@ static int http_handler(lua_State *L) {
         lua_pushstring(L, "url");
         lua_gettable(L, -2);
         url = lua_tostring(L, -1);
-        lua_pop(L, 1); 
+        lua_pop(L, 1);
 
         if (url == NULL) {
             error = "missing URL\n";
@@ -167,7 +161,7 @@ static int http_handler(lua_State *L) {
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, http_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, L);
-        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION , header_callback);
+        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
         curl_easy_setopt(curl, CURLOPT_HEADERDATA, L);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
@@ -175,12 +169,11 @@ static int http_handler(lua_State *L) {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
         res = curl_easy_perform(curl);
 
-        if(res != CURLE_OK) {
+        if (res != CURLE_OK) {
             error = curl_easy_strerror(res);
             break;
         }
-    }
-    while(0);
+    } while (0);
 
     if (error) {
         lua_pushstring(L, "set");
@@ -207,8 +200,11 @@ static int http_handler(lua_State *L) {
 
     return 0;
 }
+//! @endcond
 
-void native_http_install(lua_State* L) {
+void native_http_load() {
+    lua_State *const L = lua();
+
     curl_global_init(CURL_GLOBAL_DEFAULT);
     lua_newtable(L);
     lua_pushstring(L, "handler");
@@ -217,17 +213,16 @@ void native_http_install(lua_State* L) {
     lua_setglobal(L, "native_dict_http");
 }
 
-void native_http_cleanup(lua_State* L) {
+void native_http_exit() {
     curl_global_cleanup();
 }
 
+void native_http_install() {
+    kernel_event_install(KERNEL_EVENT_PRE_INIT, native_http_load);
+    kernel_event_install(KERNEL_EVENT_EXIT, native_http_exit);
+}
 
 #ifdef DOXYGEN
-/**
- * @defgroup api
- * @{
- */
-
 /**
  * @short @c std.http.get
  * @par Lua definition
@@ -238,19 +233,20 @@ void native_http_cleanup(lua_State* L) {
  * @endcode
  */
 class native_dict_http {
-public:
+   public:
     /**
      * @brief supports HTTPS
      * @warning TLS 1.3 is not supported.
-     */ 
+     */
     bool https = true;
     /**
      * @pre @c self.speed must be @c '_fast' or @c ''
-     * @pre @c self.method must be @c 'GET' @c 'HEAD' @c 'POST' @c 'PUT' @c 'DELETE' or @c 'PATCH'
+     * @pre @c self.method must be @c 'GET' @c 'HEAD' @c 'POST' @c 'PUT' @c
+     * 'DELETE' or @c 'PATCH'
      * @param[in, out] self @c dict
      * @code
      * local self = {
-     *   url = '', 
+     *   url = '',
      *   speed = '',
      *   method = '',
      *   body_content = '',
@@ -263,11 +259,6 @@ public:
      *
      * @endcode
      */
-    int handler(lua_State* L);
+    int handler(lua_State *L);
 };
-
-/**
- * @}
- */
-
 #endif

@@ -228,8 +228,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(dep_curl)
 
-FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*/*.c")
-add_executable(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/src/main.c;${engine_files}")
+FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*.c")
+add_executable(${PROJECT_NAME} ${engine_files})
 target_link_libraries(${PROJECT_NAME} PRIVATE lua-static)
 target_link_libraries(${PROJECT_NAME} PRIVATE lua_cjson-static)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2-static)

@@ -3,49 +3,61 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+#include <inttypes.h>
 
-//! @cond
-#ifndef NOT_USE_GETOPT
-#include <unistd.h>
-#endif
-//! @endcond
+typedef enum {
+    KERNEL_EVENT_PRE_INIT,
+    KERNEL_EVENT_INIT,
+    KERNEL_EVENT_POST_INIT,
+    KERNEL_EVENT_PRE_UPDATE,
+    KERNEL_EVENT_UPDATE,
+    KERNEL_EVENT_POST_UPDATE,
+    KERNEL_EVENT_PRE_EXIT,
+    KERNEL_EVENT_EXIT,
+    KERNEL_EVENT_POST_EXIT,
+    KERNEL_EVENT_COUNT
+} kernel_event_t;
 
-#include "lua/lua.h"
-#include "lua/lualib.h"
-#include "lua/lauxlib.h"
-#include "SDL/include/SDL.h"
-#include "SDL_ttf/SDL_ttf.h"
+void kernel_init(int argc, char* argv[]);
+void kernel_update();
+void kernel_set_dt(uint8_t milis);
+void kernel_exit();
 
-//! @cond
-extern int app_width;
-extern int app_height;
-extern bool app_fullscreen;
+//! @file src/engine_event.c
+void engine_install();
 
-extern SDL_Window* window;
-extern SDL_Renderer* renderer;
+//! @file src/kernel_error.c
+void kernel_add_error(const char*);
+bool kernel_has_error();
+const char *const kernel_get_error();
 
-//! @file src/cjson/native_json.c
-void native_json_install(lua_State* L);
+//! @file src/kernel_event.c
+void kernel_event_install(kernel_event_t, void*);
+void kernel_event_callback(kernel_event_t, kernel_event_t);
 
-//! @file src/curl/native_http.c
-void native_http_install(lua_State* L);
-void native_http_cleanup(lua_State* L);
+//! @file src/kernel_runtime.c
+bool kernel_runtime_online();
+void kernel_runtime_quit();
+int kernel_runtime_get_status();
 
-//! @file src/lua/main.c
-int lua_main(lua_State *L, char *file_name);
+//! @file src/lua.c
+void lua_install();
 
-//! @file src/lua/lib.c
-void lua_addPath(lua_State *L, const char* path);
-void lua_addArgs(lua_State *L, int argc, char* argv[]);
-bool lua_dofileOrBuffer(lua_State *L, const char* buffer, size_t buflen, const char* file_name);
+void native_draw_install();
+void native_http_install();
+void native_json_install();
 
-//! @file src/sdl/main.c
-int sdl_main_core(lua_State *L, char* engine_file_name, char* game_file_name);
+//! @file src/sdl_api.c
+void sdl_set_title(char* new_title);
+char *const sdl_get_title();
 
-//! @file src/sdl/native_draw.c
-void native_draw_install(lua_State *L);
+//! @file src/sdl_primitives.c
+void sdl_install();
 
-//! @file src/sdl/native_event.c
-bool native_event_pool(lua_State *L);
-
-//! @endcond
+//! @file src/sdl_primitives.c
+void sdl_draw_start();
+void sdl_draw_flush();
+void sdl_draw_clear(uint32_t c, double x, double y, double w, double h);
+void sdl_draw_color(uint32_t c);
+void sdl_draw_rect(uint8_t mode, double x, double y, double w, double h);
+void sdl_draw_line(double x1, double y1, double x2, double y2);

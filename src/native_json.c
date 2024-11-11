@@ -1,8 +1,10 @@
+#include "lua.h"
 #include "zeebo.h"
 
-extern int luaopen_cjson(lua_State* L);
+extern int luaopen_cjson(lua_State *L);
 
-void native_json_install(lua_State* L) {
+static void native_json_load() {
+    lua_State *const L = lua();
     luaopen_cjson(L);
     lua_setglobal(L, "native_dict_json");
 
@@ -19,12 +21,11 @@ void native_json_install(lua_State* L) {
     lua_pcall(L, 1, 0, 0);
 }
 
-#ifdef DOXYGEN
-/**
- * @defgroup api
- * @{
- */
+void native_json_install() {
+    kernel_event_install(KERNEL_EVENT_PRE_INIT, native_json_load);
+}
 
+#ifdef DOXYGEN
 /**
  * @short @c std.json
  *
@@ -39,23 +40,18 @@ void native_json_install(lua_State* L) {
  * @endcode
  */
 class native_dict_json {
-public:
+   public:
     /**
      * @short @c std.json.encode
      * @param [in] x @c any
      * @return @c string
      */
-    int encode(lua_State* L);
+    int encode(lua_State *L);
     /**
      * @short @c std.json.decode
      * @param [in] x @c string
      * @return @c any
      */
-    int decode(lua_State* L);
+    int decode(lua_State *L);
 };
-
-/**
- * @}
- */
-
 #endif
