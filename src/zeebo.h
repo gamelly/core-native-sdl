@@ -27,6 +27,9 @@ typedef enum {
     KERNEL_EVENT_INIT,
     KERNEL_EVENT_POST_INIT,
     KERNEL_EVENT_PRE_UPDATE,
+    KERNEL_EVENT_PRE_TICKET,
+    KERNEL_EVENT_TICKET,
+    KERNEL_EVENT_POST_TICKET,
     KERNEL_EVENT_UPDATE,
     KERNEL_EVENT_POST_UPDATE,
     KERNEL_EVENT_PRE_DRAW,
@@ -39,6 +42,7 @@ typedef enum {
 } kernel_event_t;
 
 typedef struct {
+    bool hardware;
     bool fullscren;
     uint16_t width;
     uint16_t height;
@@ -48,6 +52,7 @@ typedef struct {
 } kernel_options_t;
 
 typedef struct {
+    unsigned long ticks_60fps;
     unsigned long ticks;
     unsigned long dt;
 } kernel_time_t;

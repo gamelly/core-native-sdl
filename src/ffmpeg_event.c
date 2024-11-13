@@ -146,6 +146,8 @@ static void ffmpeg_exit() {
     }
 }
 
+static uint64_t next_frame = 0;
+
 void display() {
     do {
         time_t start = time(NULL);
@@ -158,24 +160,37 @@ void display() {
 
         SDL_UpdateYUVTexture(texture, &rect, vframe->data[0], vframe->linesize[0], vframe->data[1], vframe->linesize[1], vframe->data[2],
                              vframe->linesize[2]);
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, &rect);
+
         time_t end = time(NULL);
         double diffms = difftime(end, start) / 1000.0;
+        if (diffms < fpsrendering) {
+            uint32_t diff = (uint32_t)((fpsrendering - diffms) * 1000);
+            next_frame = kernel_time.ticks + diff;
+        }
     } while (0);
 }
 
-static void ffmpeg_draw() {
+static void ffmpeg_tick() {
+    if (kernel_time.ticks < next_frame){
+        return;
+    }
     if (av_read_frame(pFormatCtx, packet) >= 0) {
         if (packet->stream_index == vidId) {
             display();
         }
         av_packet_unref(packet);
+    } else {
+        av_seek_frame(pFormatCtx, vidId, 0, AVSEEK_FLAG_BACKWARD);
     }
+}
+
+static void ffmpeg_draw() {
+    SDL_RenderCopy(renderer, texture, NULL, &rect);
 }
 
 void ffmpeg_install() {
     kernel_event_install(KERNEL_EVENT_POST_INIT, ffmpeg_init);
+    kernel_event_install(KERNEL_EVENT_TICKET, ffmpeg_tick);
     kernel_event_install(KERNEL_EVENT_DRAW, ffmpeg_draw);
     kernel_event_install(KERNEL_EVENT_EXIT, ffmpeg_exit);
 }

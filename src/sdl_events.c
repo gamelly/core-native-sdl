@@ -35,7 +35,9 @@ static void sdl_init() {
         return;
     }
 
-    window = SDL_CreateWindow(sdl_get_title(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_SHOWN);
+    const int windowpos = SDL_WINDOWPOS_UNDEFINED;
+    uint32_t windowmode = kernel_option.hardware? SDL_WINDOW_OPENGL: SDL_WINDOW_SHOWN;
+    window = SDL_CreateWindow(sdl_get_title(), windowpos, windowpos, 1280, 720, windowmode);
 
     if (!window) {
         kernel_add_error("Unable to create window:");
@@ -43,7 +45,8 @@ static void sdl_init() {
         return;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, 0);
+    uint32_t rendermode = kernel_option.hardware? SDL_RENDERER_ACCELERATED: 0;
+    renderer = SDL_CreateRenderer(window, -1, rendermode);
     if (!renderer) {
         kernel_add_error("Unable to create renderer:");
         kernel_add_error(SDL_GetError());
@@ -64,9 +67,7 @@ static void sdl_exit() {
 }
 
 static void sdl_tickets() {
-    unsigned long ticks = SDL_GetTicks();
-    kernel_time.dt = ticks - kernel_time.ticks;
-    kernel_time.ticks = ticks;
+    kernel_time.ticks = SDL_GetTicks();
 }
 
 static void sdl_event_pool() {
@@ -83,7 +84,7 @@ static void sdl_event_pool() {
 }
 
 static void sdl_delay() {
-    SDL_Delay(16);
+    SDL_Delay(1);
 }
 
 static void sdl_pre_draw() {
@@ -97,10 +98,10 @@ void sdl_post_draw() {
 
 void sdl_install() {
     kernel_event_install(KERNEL_EVENT_POST_INIT, sdl_init);
-    kernel_event_install(KERNEL_EVENT_PRE_UPDATE, sdl_tickets);
-    kernel_event_install(KERNEL_EVENT_PRE_UPDATE, sdl_event_pool);
-    kernel_event_install(KERNEL_EVENT_POST_UPDATE, sdl_delay);
+    kernel_event_install(KERNEL_EVENT_PRE_TICKET, sdl_tickets);
+    kernel_event_install(KERNEL_EVENT_TICKET, sdl_event_pool);
     kernel_event_install(KERNEL_EVENT_PRE_DRAW, sdl_pre_draw);
     kernel_event_install(KERNEL_EVENT_POST_DRAW, sdl_post_draw);
+    kernel_event_install(KERNEL_EVENT_POST_TICKET, sdl_delay);
     kernel_event_install(KERNEL_EVENT_EXIT, sdl_exit);
 }
