@@ -1,5 +1,3 @@
-
-#include "lua.h"
 #include "zeebo.h"
 
 static int native_draw_start(lua_State *L) {
@@ -13,7 +11,12 @@ static int native_draw_flush(lua_State *L) {
 }
 
 static int native_draw_clear(lua_State *L) {
-    sdl_draw_start();
+    uint32_t color = luaL_checknumber(L, 1);
+    double x = luaL_checknumber(L, 2);
+    double y = luaL_checknumber(L, 3);
+    double w = luaL_checknumber(L, 4);
+    double h = luaL_checknumber(L, 5);
+    sdl_draw_clear(color, x, y, w, h);
     lua_settop(L, 0);
     return 0;
 }

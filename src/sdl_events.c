@@ -1,11 +1,11 @@
-#include "sdl.h"
 #include "zeebo.h"
 
 SDL_Window *window;
 SDL_Renderer *renderer;
+kernel_time_t kernel_time;
 
 static const char *sdl_keybinding(SDL_Keycode key) {
-    switch(key) {
+    switch (key) {
         case SDLK_UP: return "up";
         case SDLK_DOWN: return "down";
         case SDLK_LEFT: return "left";
@@ -16,7 +16,7 @@ static const char *sdl_keybinding(SDL_Keycode key) {
         case SDLK_v: return "d";
         case SDLK_RETURN: return "a";
     }
-   return "_";
+    return "_";
 }
 
 static void sdl_init() {
@@ -64,10 +64,9 @@ static void sdl_exit() {
 }
 
 static void sdl_tickets() {
-    static unsigned long old_ticks = 0;
-    unsigned long new_ticks = SDL_GetTicks();
-    kernel_set_dt(new_ticks - old_ticks);
-    old_ticks = new_ticks;
+    unsigned long ticks = SDL_GetTicks();
+    kernel_time.dt = ticks - kernel_time.ticks;
+    kernel_time.ticks = ticks;
 }
 
 static void sdl_event_pool() {
@@ -75,11 +74,9 @@ static void sdl_event_pool() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             kernel_runtime_quit();
-        }
-        else if (event.type == SDL_KEYDOWN) {
+        } else if (event.type == SDL_KEYDOWN) {
             engine_keypress(sdl_keybinding(event.key.keysym.sym), 1);
-        }
-        else if (event.type == SDL_KEYUP) {
+        } else if (event.type == SDL_KEYUP) {
             engine_keypress(sdl_keybinding(event.key.keysym.sym), 0);
         }
     }
@@ -89,10 +86,21 @@ static void sdl_delay() {
     SDL_Delay(16);
 }
 
+static void sdl_pre_draw() {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+}
+
+void sdl_post_draw() {
+    SDL_RenderPresent(renderer);
+}
+
 void sdl_install() {
     kernel_event_install(KERNEL_EVENT_POST_INIT, sdl_init);
     kernel_event_install(KERNEL_EVENT_PRE_UPDATE, sdl_tickets);
     kernel_event_install(KERNEL_EVENT_PRE_UPDATE, sdl_event_pool);
     kernel_event_install(KERNEL_EVENT_POST_UPDATE, sdl_delay);
+    kernel_event_install(KERNEL_EVENT_PRE_DRAW, sdl_pre_draw);
+    kernel_event_install(KERNEL_EVENT_POST_DRAW, sdl_post_draw);
     kernel_event_install(KERNEL_EVENT_EXIT, sdl_exit);
 }

@@ -56,6 +56,7 @@ int main(int argc, char *argv[]) {
     native_json_install();
     native_http_install();
 
+    ffmpeg_install();
     engine_install();
 
     kernel_init(argc, argv);

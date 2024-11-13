@@ -1,5 +1,3 @@
-#include "curl/include/curl/curl.h"
-#include "lua.h"
 #include "zeebo.h"
 
 //! @cond

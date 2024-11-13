@@ -4,6 +4,23 @@
 #include <stddef.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stdlib.h>
+
+#include "lua/lua.h"
+#include "lua/lualib.h"
+#include "lua/lauxlib.h"
+
+#include "SDL/include/SDL.h"
+#include "SDL_ttf/SDL_ttf.h"
+
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+
+#include "curl/include/curl/curl.h"
+
+#ifndef NOT_USE_GETOPT
+#include <unistd.h>
+#endif
 
 typedef enum {
     KERNEL_EVENT_PRE_INIT,
@@ -12,20 +29,43 @@ typedef enum {
     KERNEL_EVENT_PRE_UPDATE,
     KERNEL_EVENT_UPDATE,
     KERNEL_EVENT_POST_UPDATE,
+    KERNEL_EVENT_PRE_DRAW,
+    KERNEL_EVENT_DRAW,
+    KERNEL_EVENT_POST_DRAW,
     KERNEL_EVENT_PRE_EXIT,
     KERNEL_EVENT_EXIT,
     KERNEL_EVENT_POST_EXIT,
     KERNEL_EVENT_COUNT
 } kernel_event_t;
 
+typedef struct {
+    bool fullscren;
+    uint16_t width;
+    uint16_t height;
+    char *media;
+    char *game;
+    char *engine;
+} kernel_options_t;
+
+typedef struct {
+    unsigned long ticks;
+    unsigned long dt;
+} kernel_time_t;
+
+extern lua_State *const lua();
+extern kernel_time_t kernel_time;
+extern kernel_options_t kernel_option;
+
 void kernel_init(int argc, char* argv[]);
 void kernel_update();
-void kernel_set_dt(uint8_t milis);
 void kernel_exit();
 
 //! @file src/engine_event.c
 void engine_install();
 void engine_keypress(const char *const , uint8_t);
+
+//! @file src/ffmpeg.c
+void ffmpeg_install();
 
 //! @file src/kernel_error.c
 void kernel_add_error(const char*);

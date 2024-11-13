@@ -1,5 +1,3 @@
-#include "lua.h"
-
 #include "zeebo.h"
 
 static lua_State *L;

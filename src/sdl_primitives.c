@@ -1,4 +1,3 @@
-#include "sdl.h"
 #include "zeebo.h"
 
 extern SDL_Renderer *renderer;
@@ -9,24 +8,29 @@ static union {
 } color;
 
 void sdl_draw_start() {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 }
 
 void sdl_draw_flush() {
-    SDL_RenderPresent(renderer);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
+/**
+ * @todo correct RGB order (endiness)
+ */
 void sdl_draw_clear(uint32_t c, double x, double y, double w, double h) {
     color.raw = c;
     SDL_FRect rect = {x, y, w, h};
-    SDL_SetRenderDrawColor(renderer, color.sdl.r, color.sdl.g, color.sdl.b, color.sdl.a);
+    SDL_SetRenderDrawColor(renderer, color.sdl.a, color.sdl.b, color.sdl.g, color.sdl.r);
     SDL_RenderFillRectF(renderer, &rect);
 }
 
+/**
+ * @todo correct RGB order (endiness)
+ */
 void sdl_draw_color(uint32_t c) {
     color.raw = c;
-    SDL_SetRenderDrawColor(renderer, color.sdl.r, color.sdl.g, color.sdl.b, color.sdl.a);
+    SDL_SetRenderDrawColor(renderer, color.sdl.a, color.sdl.b, color.sdl.g, color.sdl.r);
 }
 
 void sdl_draw_rect(uint8_t mode, double x, double y, double w, double h) {

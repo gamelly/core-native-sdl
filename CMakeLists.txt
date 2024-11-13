@@ -11,6 +11,7 @@ set(CMAKE_SYSTEM_NAME "Generic")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 include_directories("${CMAKE_SOURCE_DIR}/src")
 include_directories("${CMAKE_SOURCE_DIR}/vendor")
+include_directories("${CMAKE_SOURCE_DIR}/vendor/ffmpeg")
 
 # Zig
 set(ZIG_VERSION "0.13.0")
@@ -228,6 +229,28 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(dep_curl)
 
+# FFMPEG
+set(FFMPEG_VERSION "7.0.2")
+set(FFMPEG_DOWNLOAD "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz")
+set(FFMPEG_DIR "${CMAKE_SOURCE_DIR}/vendor/ffmpeg")
+if (NOT EXISTS "${FFMPEG_DIR}/libavcodec/libavcodec.a")
+    FetchContent_Populate(dep_ffmpeg URL ${FFMPEG_DOWNLOAD} SOURCE_DIR ${FFMPEG_DIR})
+    execute_process(
+        COMMAND ./configure --prefix=${FFMPEG_DIR}/build --enable-static --disable-shared --disable-lzma --disable-x86asm --disable-libdrm
+        WORKING_DIRECTORY ${FFMPEG_DIR}
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    execute_process(
+        COMMAND make
+        WORKING_DIRECTORY ${FFMPEG_DIR}
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+endif()
+FILE(GLOB ffmpeg_files "${FFMPEG_DIR}/*/*.a")
+#add_library(ffmpeg-static STATIC IMPORTED)
+#set_target_properties(ffmpeg-static PROPERTIES IMPORTED_LOCATION ${ffmpeg_files})
+#set(ffmpeg_files "${FFMPEG_DIR}/libavcodec/libavcodec.a;${FFMPEG_DIR}/libavformat/libavformat.a;${FFMPEG_DIR}/libavutil/libavutil.a;${FFMPEG_DIR}/libswscale/libswscale.a")
+
 FILE(GLOB engine_files "${CMAKE_SOURCE_DIR}/src/*.c")
 add_executable(${PROJECT_NAME} ${engine_files})
 target_link_libraries(${PROJECT_NAME} PRIVATE lua-static)
@@ -235,3 +258,4 @@ target_link_libraries(${PROJECT_NAME} PRIVATE lua_cjson-static)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2-static)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2_ttf::SDL2_ttf-static)
 target_link_libraries(${PROJECT_NAME} PRIVATE CURL::libcurl)
+target_link_libraries(${PROJECT_NAME} PRIVATE "${ffmpeg_files}")

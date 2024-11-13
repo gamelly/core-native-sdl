@@ -1,19 +1,27 @@
 #include "zeebo.h"
 
-static uint8_t core_dt;
+kernel_options_t kernel_option;
 
 void kernel_init(int argc, char *argv[]) {
+    int opt;
+    while ((opt = getopt(argc, argv, "e:fg:h:m:w")) != -1) {
+        switch (opt) {
+            case 'e': kernel_option.engine = optarg; break;
+            case 'f': kernel_option.fullscren = true; break;
+            case 'g': kernel_option.game = optarg; break;
+            case 'h': kernel_option.height = atoi(optarg); break;
+            case 'm': kernel_option.media = optarg; break;
+            case 'w': kernel_option.width = atoi(optarg); break;
+        }
+    }
+
     kernel_event_callback(KERNEL_EVENT_PRE_INIT, KERNEL_EVENT_POST_INIT);
 }
 
 void kernel_update() {
-    kernel_event_callback(KERNEL_EVENT_PRE_UPDATE, KERNEL_EVENT_POST_UPDATE);
+    kernel_event_callback(KERNEL_EVENT_PRE_UPDATE, KERNEL_EVENT_POST_DRAW);
 }
 
 void kernel_exit() {
     kernel_event_callback(KERNEL_EVENT_PRE_EXIT, KERNEL_EVENT_POST_EXIT);
-}
-
-void kernel_set_dt(uint8_t milis) {
-    core_dt = milis;
 }
