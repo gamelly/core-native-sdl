@@ -171,7 +171,10 @@ void display() {
 }
 
 static void ffmpeg_tick() {
-    if (kernel_time.ticks < next_frame){
+    if (!kernel_option.media) {
+        return;
+    }
+    if (kernel_time.ticks < next_frame) {
         return;
     }
     if (av_read_frame(pFormatCtx, packet) >= 0) {
@@ -185,6 +188,9 @@ static void ffmpeg_tick() {
 }
 
 static void ffmpeg_draw() {
+    if (!kernel_option.media) {
+        return;
+    }
     SDL_RenderCopy(renderer, texture, NULL, &rect);
 }
 

@@ -100,7 +100,12 @@ char *const sdl_get_title();
 //! @file src/sdl_primitives.c
 void sdl_install();
 
+//! @file src/sdl_text.c
+void sdl_text_font_size(uint32_t font_size);
+void sdl_text_print(uint8_t mode, int x, int y, const char *text, int *const width, int *const height);
+
 //! @file src/sdl_primitives.c
+SDL_Color sdl_get_color();
 void sdl_draw_start();
 void sdl_draw_flush();
 void sdl_draw_clear(uint32_t c, double x, double y, double w, double h);

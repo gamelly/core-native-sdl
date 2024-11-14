@@ -36,7 +36,7 @@ static void sdl_init() {
     }
 
     const int windowpos = SDL_WINDOWPOS_UNDEFINED;
-    uint32_t windowmode = kernel_option.hardware? SDL_WINDOW_OPENGL: SDL_WINDOW_SHOWN;
+    uint32_t windowmode = kernel_option.hardware ? SDL_WINDOW_OPENGL : SDL_WINDOW_SHOWN;
     window = SDL_CreateWindow(sdl_get_title(), windowpos, windowpos, 1280, 720, windowmode);
 
     if (!window) {
@@ -45,7 +45,7 @@ static void sdl_init() {
         return;
     }
 
-    uint32_t rendermode = kernel_option.hardware? SDL_RENDERER_ACCELERATED: 0;
+    uint32_t rendermode = kernel_option.hardware ? SDL_RENDERER_ACCELERATED : 0;
     renderer = SDL_CreateRenderer(window, -1, rendermode);
     if (!renderer) {
         kernel_add_error("Unable to create renderer:");
