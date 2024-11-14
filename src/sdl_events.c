@@ -19,11 +19,7 @@ static const char *sdl_keybinding(SDL_Keycode key) {
     return "_";
 }
 
-static void sdl_init() {
-    if (kernel_has_error()) {
-        return;
-    }
-
+static void sdl_pre_init() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         kernel_add_error("Unable to initialize SDL:");
         kernel_add_error(SDL_GetError());
@@ -35,9 +31,30 @@ static void sdl_init() {
         return;
     }
 
-    const int windowpos = SDL_WINDOWPOS_UNDEFINED;
-    uint32_t windowmode = kernel_option.hardware ? SDL_WINDOW_OPENGL : SDL_WINDOW_SHOWN;
-    window = SDL_CreateWindow(sdl_get_title(), windowpos, windowpos, 1280, 720, windowmode);
+    if (!kernel_option.resized && kernel_option.fullscreen > 0) {
+        SDL_DisplayMode DM;
+        if (SDL_GetCurrentDisplayMode(0, &DM) == 0) {
+            kernel_option.width = DM.w;
+            kernel_option.height = DM.h;
+        }
+    }
+}
+
+static void sdl_post_init() {
+    static const int wpos = SDL_WINDOWPOS_UNDEFINED;
+    uint32_t wmode = kernel_option.hardware ? SDL_WINDOW_OPENGL : SDL_WINDOW_SHOWN;
+
+    if (kernel_option.fullscreen == 1) {
+        wmode |= SDL_WINDOW_FULLSCREEN;
+    }
+    if (kernel_option.fullscreen == 2) {
+        wmode |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    }
+    if (kernel_option.fullscreen == 3) {
+        wmode |= SDL_WINDOW_MAXIMIZED | SDL_WINDOW_BORDERLESS;
+    }
+
+    window = SDL_CreateWindow(sdl_get_title(), wpos, wpos, kernel_option.width, kernel_option.height, wmode);
 
     if (!window) {
         kernel_add_error("Unable to create window:");
@@ -97,7 +114,8 @@ void sdl_post_draw() {
 }
 
 void sdl_install() {
-    kernel_event_install(KERNEL_EVENT_POST_INIT, sdl_init);
+    kernel_event_install(KERNEL_EVENT_PRE_INIT, sdl_pre_init);
+    kernel_event_install(KERNEL_EVENT_POST_INIT, sdl_post_init);
     kernel_event_install(KERNEL_EVENT_PRE_TICKET, sdl_tickets);
     kernel_event_install(KERNEL_EVENT_TICKET, sdl_event_pool);
     kernel_event_install(KERNEL_EVENT_PRE_DRAW, sdl_pre_draw);

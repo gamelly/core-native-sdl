@@ -1,18 +1,24 @@
 #include "zeebo.h"
 
-kernel_options_t kernel_option;
+kernel_options_t kernel_option = {.width = 1280, .height = 640};
 
 void kernel_init(int argc, char *argv[]) {
     int opt;
-    while ((opt = getopt(argc, argv, "e:fg:h:m:wH")) != -1) {
+    while ((opt = getopt(argc, argv, "e:f:g:Hh:m:w:")) != -1) {
         switch (opt) {
             case 'e': kernel_option.engine = optarg; break;
-            case 'f': kernel_option.fullscren = true; break;
+            case 'f': kernel_option.fullscreen = atoi(optarg); break;
             case 'g': kernel_option.game = optarg; break;
-            case 'h': kernel_option.height = atoi(optarg); break;
-            case 'm': kernel_option.media = optarg; break;
-            case 'w': kernel_option.width = atoi(optarg); break;
             case 'H': kernel_option.hardware = true; break;
+            case 'h':
+                kernel_option.height = atoi(optarg);
+                kernel_option.resized = true;
+                break;
+            case 'm': kernel_option.media = optarg; break;
+            case 'w':
+                kernel_option.width = atoi(optarg);
+                kernel_option.resized = true;
+                break;
         }
     }
 

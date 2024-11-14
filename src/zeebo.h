@@ -42,8 +42,9 @@ typedef enum {
 } kernel_event_t;
 
 typedef struct {
+    bool resized;
     bool hardware;
-    bool fullscren;
+    uint8_t fullscreen;
     uint16_t width;
     uint16_t height;
     char *media;

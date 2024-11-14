@@ -74,8 +74,8 @@ static void engine_init() {
         }
 
         lua_getglobal(L, "native_callback_init");
-        lua_pushnumber(L, 1280);
-        lua_pushnumber(L, 720);
+        lua_pushnumber(L, kernel_option.width);
+        lua_pushnumber(L, kernel_option.height);
 
         luaL_loadbuffer(L, game, game_len, "game");
         if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
