@@ -62,6 +62,11 @@ static void engine_init() {
             break;
         }
 
+        if (game_len == 0 && !load_script("game.lua", &game, &game_len)) {
+            kernel_add_error("copy your game.lua near the executable folder!");
+            break;
+        }
+
         luaL_loadbuffer(L, engine, engine_len, "engine");
         if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
             kernel_add_error(lua_tostring(L, -1));
