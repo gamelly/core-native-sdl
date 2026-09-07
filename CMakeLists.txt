@@ -48,6 +48,7 @@ option(GECND_USE_SQLITE3 "fetch and build sqlite3" ON)
 option(GECND_USE_LIBUV "fetch and build libuv" ON)
 option(GECND_USE_ZLIB "fetch and build zlib" ON)
 option(GECND_USE_PLUGIN_LIBRETRO "build plugin libretro for core native" OFF)
+option(GECND_USE_PLUGIN_SDL2 "build SDL2 IPC plugin and child runtime" OFF)
 
 # EXE
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
@@ -180,6 +181,10 @@ if(GECND_USE_PLUGIN_LIBRETRO)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
         ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     )
+endif()
+
+if(GECND_USE_PLUGIN_SDL2)
+    add_subdirectory(plugins/sdl2)
 endif()
 
 # TODO: use custom command with output

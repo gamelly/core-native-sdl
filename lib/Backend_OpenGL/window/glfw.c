@@ -8,16 +8,7 @@
 #include "geopengl.h"
 #include <GLFW/glfw3.h>
 
-/* Registers two runtime-selectable backends off this one file: backend:gl_glfw
- * (desktop GL via the native context API) and backend:gles_glfw (GLES2 via
- * GLFW's EGL context path). Which one runs is decided later by the selector in
- * Frontend_Core/update.c; both are registered only if their underlying shared
- * libs are present (ge_lib_available), so an unusable variant never even shows
- * up as a candidate.
- *
- * Neither entry point may exit() on failure — it adds an error and unwinds, so
- * the selector can fall through to the next candidate. */
-typedef enum { GE_GLFW_GL, GE_GLFW_GLES } ge_glfw_api_t;
+typedef enum { GE_GLFW_GL, GE_GLFW_GLES, GE_GLFW_GL_EGL } ge_glfw_api_t;
 
 static const struct {
     int key;
@@ -96,8 +87,13 @@ static const char *glfw_reason(void) {
     return last_glfw_error[0] ? last_glfw_error : "no reason reported";
 }
 
+static void framebuffer_resized(GLFWwindow *window, int width, int height) {
+    (void)window;
+    if (width > 0 && height > 0) ge_pipeline_resize((uint16_t)width, (uint16_t)height);
+}
+
 static void backend_init(gecnd_t *gly, ge_glfw_api_t api) {
-    const char *tag = api == GE_GLFW_GLES ? "gles_glfw" : "gl_glfw";
+    const char *tag = api == GE_GLFW_GLES ? "gles_glfw" : api == GE_GLFW_GL_EGL ? "gl_egl_glfw" : "gl_glfw";
     uint16_t width  = (uint16_t)gly->width;
     uint16_t height = (uint16_t)gly->height;
     GLBackendState *s = geogl_get_state();
@@ -111,7 +107,7 @@ static void backend_init(gecnd_t *gly, ge_glfw_api_t api) {
             backend_error("[%s] libGL.so.1 not available", tag);
             break;
         }
-        if (api == GE_GLFW_GLES &&
+        if (api != GE_GLFW_GL &&
             !ge_lib_available("libEGL.so.1") && !ge_lib_available("libEGL.so")) {
             backend_error("[%s] libEGL not available", tag);
             break;
@@ -125,7 +121,7 @@ static void backend_init(gecnd_t *gly, ge_glfw_api_t api) {
         glfw_up = true;
 
         glfwWindowHint(GLFW_CLIENT_API, api == GE_GLFW_GLES ? GLFW_OPENGL_ES_API : GLFW_OPENGL_API);
-        glfwWindowHint(GLFW_CONTEXT_CREATION_API, api == GE_GLFW_GLES ? GLFW_EGL_CONTEXT_API : GLFW_NATIVE_CONTEXT_API);
+        glfwWindowHint(GLFW_CONTEXT_CREATION_API, api != GE_GLFW_GL ? GLFW_EGL_CONTEXT_API : GLFW_NATIVE_CONTEXT_API);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
@@ -155,6 +151,10 @@ static void backend_init(gecnd_t *gly, ge_glfw_api_t api) {
         gamely_input_add_cb("@tick", glfwPollEvents, NULL);
 
         ge_backend_ready(gly, width, height, api == GE_GLFW_GLES);
+        glfwSetFramebufferSizeCallback(s->window, framebuffer_resized);
+        int framebuffer_width, framebuffer_height;
+        glfwGetFramebufferSize(s->window, &framebuffer_width, &framebuffer_height);
+        framebuffer_resized(s->window, framebuffer_width, framebuffer_height);
 
         static const bool enabled = true;
         gecnd_registry("set", "internal:gl", &enabled, NULL);
@@ -171,9 +171,11 @@ static void backend_init(gecnd_t *gly, ge_glfw_api_t api) {
 
 static void backend_init_gl(gecnd_t *gly)   { backend_init(gly, GE_GLFW_GL); }
 static void backend_init_gles(gecnd_t *gly) { backend_init(gly, GE_GLFW_GLES); }
+static void backend_init_gl_egl(gecnd_t *gly) { backend_init(gly, GE_GLFW_GL_EGL); }
 
 __attribute__((constructor))
 static void init(void) {
     gecnd_registry("set", "backend:gl_glfw",   (void *)backend_init_gl,   NULL);
     gecnd_registry("set", "backend:gles_glfw", (void *)backend_init_gles, NULL);
+    gecnd_registry("set", "backend:gl_egl_glfw", (void *)backend_init_gl_egl, NULL);
 }
