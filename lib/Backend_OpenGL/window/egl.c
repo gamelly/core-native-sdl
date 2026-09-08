@@ -155,8 +155,8 @@ static void backend_init(gecnd_t *gly, ge_egl_api_t api) {
             backend_error("[%s] %s (eglError=0x%x)", tag, why, eglGetError());
             break;
         }
-        if (!gladLoadGL((GLADloadfunc)glad_gles_loader)) {
-            backend_error("[%s] gladLoadGL failed: could not load GL/GLES entry points", tag);
+        if (!ge_gl_load(api == GE_EGL_GLES, (GLADloadfunc)glad_gles_loader)) {
+            backend_error("[%s] glad load failed: could not load GL/GLES entry points", tag);
             break;
         }
 

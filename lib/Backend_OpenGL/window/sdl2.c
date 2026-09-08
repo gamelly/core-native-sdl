@@ -198,8 +198,8 @@ static void backend_init(gecnd_t *gly, ge_sdl_api_t api) {
         }
 
         p_SDL_GL_MakeCurrent(sdl_window, sdl_gl_context);
-        if (!gladLoadGL((GLADloadfunc)sdl_proc_address)) {
-            backend_error("[%s] gladLoadGL failed: could not load GL entry points", tag);
+        if (!ge_gl_load(api == GE_SDL_GLES, (GLADloadfunc)sdl_proc_address)) {
+            backend_error("[%s] glad load failed: could not load GL entry points", tag);
             break;
         }
 

@@ -20,6 +20,10 @@ void ge_window_ops_set(const GEWindowOps *ops) {
     g_gl_state.ops = *ops;
 }
 
+int ge_gl_load(bool is_gles, GLADloadfunc load) {
+    return is_gles ? gladLoadGLES2(load) : gladLoadGL(load);
+}
+
 bool ge_lib_available(const char *soname) {
     void *h = dlopen(soname, RTLD_LAZY);
     if (!h) return false;

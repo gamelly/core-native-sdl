@@ -282,6 +282,13 @@ void ge_hw_register(void);
 void ge_window_ops_set(const GEWindowOps *ops);
 void ge_backend_ready(gecnd_t *gly, uint16_t width, uint16_t height, bool is_gles);
 
+/* Resolves the glad entry points for the context the backend just made
+ * current, picking the loader that matches its API. Returns 0 when nothing
+ * could be loaded, otherwise the detected version. Backends must go through
+ * this instead of calling gladLoadGL/gladLoadGLES2 directly — the two load
+ * different halves of the same table (see common.c). */
+int ge_gl_load(bool is_gles, GLADloadfunc load);
+
 /* Undo a partial bring-up so the selector can try the next candidate in the
  * same process: drops the ops table and clears the GL-ready flag. The caller
  * is responsible for tearing down its own window-system state first. */

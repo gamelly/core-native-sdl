@@ -140,8 +140,8 @@ static void backend_init(gecnd_t *gly, ge_glfw_api_t api) {
         }
 
         glfwMakeContextCurrent(s->window);
-        if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
-            backend_error("[%s] gladLoadGL failed: could not load GL entry points", tag);
+        if (!ge_gl_load(api == GE_GLFW_GLES, (GLADloadfunc)glfwGetProcAddress)) {
+            backend_error("[%s] glad load failed: could not load GL entry points", tag);
             break;
         }
 
