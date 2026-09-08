@@ -34,6 +34,7 @@ static struct {
     int          listen_fd;
     int          client_fd;
     bool         term_sent;
+    bool         background;
     bool         preload;
     unsigned     spawn_count;
     uint16_t     win_w;
@@ -120,7 +121,13 @@ static void read_packets(void) {
         if (n == (ssize_t)sizeof(pkt)) {
             switch (pkt.type) {
                 case GECND_SDL2_PKT_HELLO:
-                    if (s.phase == PROC_SPAWNED) s.phase = PROC_CONNECTED;
+                    if (s.phase == PROC_SPAWNED) {
+                        s.phase      = PROC_CONNECTED;
+                        s.background = true;
+                        /* o filho é dono da tela: core para de desenhar */
+                        api->registry("set", "core:state",
+                                      (void *)(uintptr_t)GECND_FSM_RUNNING_BACKGROUND, NULL);
+                    }
                     fprintf(stderr, "[sdl2] %s connected (pid %u)\n", GECND_SDL2_SHIM_NAME, pkt.arg);
                     break;
                 case GECND_SDL2_PKT_WINDOW:
@@ -247,6 +254,13 @@ static bool spawn(void) {
     return true;
 }
 
+/* filho saiu: devolve a tela pro core */
+static void core_foreground(void) {
+    if (!s.background) return;
+    s.background = false;
+    api->registry("set", "core:state", (void *)(uintptr_t)GECND_FSM_RUNNING, NULL);
+}
+
 static void on_exit_status(int status) {
     bool clean = WIFEXITED(status) && WEXITSTATUS(status) == 0;
     int  code  = WIFEXITED(status) ? WEXITSTATUS(status) : -WTERMSIG(status);
@@ -263,6 +277,7 @@ static void on_exit_status(int status) {
     }
     s.pid = 0;
     sockets_close();
+    core_foreground();
 }
 
 /* ── public ──────────────────────────────────────────────────────── */
@@ -310,6 +325,7 @@ void process_stop(bool force) {
         s.pid = 0;
         sockets_close();
         s.phase = PROC_IDLE;
+        core_foreground();
         return;
     }
     if (s.phase != PROC_STOPPING) {
