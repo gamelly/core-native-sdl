@@ -26,6 +26,10 @@ void     shim_ipc_close(void);
 void     shim_ipc_send(uint8_t type, uint8_t flag, uint16_t code, uint32_t arg);
 void     shim_ipc_pump(void);
 
+void     shim_joystick_announce(void);
+void     shim_joystick_input(uint8_t pad, bool pressed);
+void     shim_joystick_quit(void);
+
 void     shim_video_pump(void);
 void     shim_video_quit(void);
 uint32_t shim_window_id(void);

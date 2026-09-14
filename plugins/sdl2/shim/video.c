@@ -13,6 +13,15 @@ typedef unsigned long XWindow;
 typedef unsigned long XAtom;
 typedef unsigned long XVisualID;
 typedef unsigned long XKeySym;
+typedef unsigned long XCursor;
+typedef unsigned long XPixmap;
+
+typedef struct {
+    unsigned long  pixel;
+    unsigned short red, green, blue;
+    char           flags;
+    char           pad;
+} XColorRaw;
 
 typedef union {
     int  type;
@@ -68,6 +77,13 @@ typedef struct {
 #define X_PropModeReplace  0
 #define X_XA_ATOM          4UL
 #define X_NET_WM_STATE_REMOVE 0
+#define X_None             0UL
+#define X_CurrentTime      0UL
+#define X_GrabModeAsync    1
+#define X_GrabSuccess      0
+#define X_PointerMotionMask (1L << 6)
+#define X_ButtonPressMask   (1L << 2)
+#define X_ButtonReleaseMask (1L << 3)
 #define X_NET_WM_STATE_ADD    1
 
 #define X_FOREACH(X) \
@@ -99,7 +115,16 @@ typedef struct {
     X(int,           XMoveWindow,         (XDisplay, XWindow, int, int)) \
     X(int,           XSendEvent,          (XDisplay, XWindow, int, long, XEventRaw *)) \
     X(int,           XChangeProperty,     (XDisplay, XWindow, XAtom, XAtom, int, int, const unsigned char *, int)) \
-    X(XKeySym,       XLookupKeysym,       (XKeyEventRaw *, int))
+    X(XKeySym,       XLookupKeysym,       (XKeyEventRaw *, int)) \
+    X(XCursor,       XCreateFontCursor,   (XDisplay, unsigned)) \
+    X(XCursor,       XCreatePixmapCursor, (XDisplay, XPixmap, XPixmap, XColorRaw *, XColorRaw *, unsigned, unsigned)) \
+    X(XPixmap,       XCreateBitmapFromData, (XDisplay, XWindow, const char *, unsigned, unsigned)) \
+    X(int,           XFreePixmap,         (XDisplay, XPixmap)) \
+    X(int,           XDefineCursor,       (XDisplay, XWindow, XCursor)) \
+    X(int,           XUndefineCursor,     (XDisplay, XWindow)) \
+    X(int,           XFreeCursor,         (XDisplay, XCursor)) \
+    X(int,           XGrabPointer,        (XDisplay, XWindow, int, unsigned, int, int, XWindow, XCursor, unsigned long)) \
+    X(int,           XUngrabPointer,      (XDisplay, unsigned long))
 
 #define X_DECL(ret, name, args) static ret (*p_##name) args;
 X_FOREACH(X_DECL)
@@ -137,6 +162,11 @@ EGL_FOREACH(EGL_DECL)
 
 #define GL_ATTR_COUNT 32
 
+struct SDL_Cursor {
+    XCursor xcursor;
+    bool    owned;
+};
+
 struct SDL_Window {
     Uint32     id;
     Uint32     flags;
@@ -156,6 +186,15 @@ static struct {
     bool        x11_keys;
     bool        create_context_ext;
     bool        attrs_set;
+    bool        sync_after_swap;
+    void      (*gl_finish)(void);
+    bool        synthetic_focus;
+    bool        cursor_shown;
+    bool        grabbed;
+    void       *lib_xcursor;
+    XCursor     invisible;
+    SDL_Cursor *cursor;
+    SDL_Cursor  default_cursor;
     void       *lib_x11;
     void       *lib_egl;
     void       *lib_gl;
@@ -170,7 +209,10 @@ static struct {
     Uint32      next_id;
     int         swap_interval;
     int         attrs[GL_ATTR_COUNT];
-} v = { .next_id = 1, .swap_interval = 1 };
+} v = { .next_id = 1, .swap_interval = 1, .cursor_shown = true };
+
+static bool video_init(void);
+static void cursor_apply(void);
 
 static void attrs_reset(void) {
     memset(v.attrs, 0, sizeof(v.attrs));
@@ -238,10 +280,13 @@ static bool video_init(void) {
         v.attrs_set = true;
     }
 
+    v.sync_after_swap = getenv(GECND_SDL2_ENV_SYNC) != NULL;
+
     const char *native = getenv(GECND_SDL2_ENV_NATIVE);
     const char *keys   = getenv(GECND_SDL2_ENV_X11KEYS);
     bool want_x = native ? (strcmp(native, "x11") == 0) : (getenv("DISPLAY") != NULL);
     v.x11_keys = (keys && keys[0] == '1') || getenv(GECND_SDL2_ENV_SOCKET) == NULL;
+    v.synthetic_focus = !v.x11_keys;
 
     if (want_x && x11_load()) {
         v.dpy = p_XOpenDisplay(NULL);
@@ -379,11 +424,13 @@ void shim_video_pump(void) {
                 shim_events_window(SDL_WINDOWEVENT_EXPOSED, 0, 0);
                 break;
             case X_FocusIn:
-                win->flags |= SDL_WINDOW_INPUT_FOCUS;
+                if (v.synthetic_focus) break;
+                win->flags |= SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS;
                 shim_events_window(SDL_WINDOWEVENT_FOCUS_GAINED, 0, 0);
                 break;
             case X_FocusOut:
-                win->flags &= ~(Uint32)SDL_WINDOW_INPUT_FOCUS;
+                if (v.synthetic_focus) break;
+                win->flags &= ~(Uint32)(SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS);
                 shim_events_window(SDL_WINDOWEVENT_FOCUS_LOST, 0, 0);
                 break;
             case X_MapNotify:
@@ -585,6 +632,10 @@ SDL_GLContext SDL_GL_CreateContext(SDL_Window *window) {
     if (!v.lib_gl) {
         v.lib_gl = dlopen(is_es() ? "libGLESv2.so.2" : "libGL.so.1", RTLD_LAZY | RTLD_GLOBAL);
     }
+    if (v.sync_after_swap && !v.gl_finish) {
+        v.gl_finish = (void (*)(void))SDL_GL_GetProcAddress("glFinish");
+        fprintf(stderr, "[libSDL2-shim] sync after swap %s\n", v.gl_finish ? "on" : "unavailable");
+    }
     fprintf(stderr, "[libSDL2-shim] GL context %d.%d created (%s)\n", major, minor, is_es() ? "GLES" : "GL");
     return (SDL_GLContext)ctx;
 }
@@ -620,15 +671,23 @@ SDL_Window *SDL_GL_GetCurrentWindow(void) {
 void SDL_GL_SwapWindow(SDL_Window *window) {
     if (!window || !window->surface) return;
     p_eglSwapBuffers(v.edpy, window->surface);
+    /* Drivers that ignore eglSwapInterval let the client queue frames ahead of
+     * the GPU, and every queued frame pins its command and vertex buffers. On a
+     * device where those come out of a small CMA pool that is fatal, so this
+     * makes the swap wait. */
+    if (v.sync_after_swap && v.gl_finish) v.gl_finish();
 }
 
 int SDL_GL_SetSwapInterval(int interval) {
     if (!v.ready) return -1;
     if (interval < 0) interval = 1;
     if (!p_eglSwapInterval(v.edpy, interval)) {
+        fprintf(stderr, "[libSDL2-shim] eglSwapInterval(%d) failed (0x%x); frames may queue up\n",
+                interval, p_eglGetError());
         shim_set_error("eglSwapInterval failed (0x%x)", p_eglGetError());
         return -1;
     }
+    fprintf(stderr, "[libSDL2-shim] swap interval %d\n", interval);
     v.swap_interval = interval;
     return 0;
 }
@@ -641,9 +700,21 @@ void *SDL_GL_GetProcAddress(const char *proc) {
     if (!proc) return NULL;
     void *p = NULL;
     if (p_eglGetProcAddress) p = p_eglGetProcAddress(proc);
+    /* eglGetProcAddress is only required to resolve extensions, so core GLES
+     * entry points come from whatever is already mapped into the process. */
+    if (!p) p = dlsym(RTLD_DEFAULT, proc);
     if (!p) {
-        if (!v.lib_gl) v.lib_gl = dlopen(is_es() ? "libGLESv2.so.2" : "libGL.so.1", RTLD_LAZY | RTLD_GLOBAL);
-        if (v.lib_gl) p = dlsym(v.lib_gl, proc);
+        static const char *const libs[] = {
+            "libGLESv2.so.2", "libGLESv2.so", "libGL.so.1", "libGL.so",
+        };
+        for (size_t i = 0; !p && i < sizeof(libs) / sizeof(*libs); i++) {
+            if (!v.lib_gl) v.lib_gl = dlopen(libs[i], RTLD_LAZY | RTLD_GLOBAL);
+            if (v.lib_gl) p = dlsym(v.lib_gl, proc);
+            if (!p && v.lib_gl) {
+                dlclose(v.lib_gl);
+                v.lib_gl = NULL;
+            }
+        }
     }
     return p;
 }
@@ -771,6 +842,18 @@ SDL_Window *SDL_CreateWindow(const char *title, int x, int y, int w, int h, Uint
     }
 
     v.window = win;
+    if (!v.cursor) v.cursor = &v.default_cursor;
+    cursor_apply();
+
+    /* Under the core the X window never takes focus (WM input hint is off) and
+     * keys arrive over IPC, so report focus ourselves — games that pause when
+     * unfocused would otherwise never run. */
+    if (v.synthetic_focus) {
+        win->flags |= SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS;
+        shim_events_window(SDL_WINDOWEVENT_SHOWN, 0, 0);
+        shim_events_window(SDL_WINDOWEVENT_FOCUS_GAINED, 0, 0);
+    }
+
     shim_ipc_send(GECND_SDL2_PKT_WINDOW, 0, (uint16_t)w, (uint32_t)h);
     fprintf(stderr, "[libSDL2-shim] window %dx%d '%s' flags=0x%x\n", w, h, win->title, flags);
     return win;
@@ -789,6 +872,9 @@ void SDL_DestroyWindow(SDL_Window *window) {
 
 void shim_video_quit(void) {
     if (v.window) SDL_DestroyWindow(v.window);
+    if (v.has_x && v.invisible) p_XFreeCursor(v.dpy, v.invisible);
+    v.invisible = X_None;
+    v.cursor    = NULL;
     if (v.ready && v.edpy != EGL_NO_DISPLAY) {
         p_eglMakeCurrent(v.edpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         p_eglTerminate(v.edpy);
@@ -939,6 +1025,189 @@ int SDL_GetWindowDisplayIndex(SDL_Window *window) {
 Uint32 SDL_GetWindowPixelFormat(SDL_Window *window) {
     (void)window;
     return SDL_PIXELFORMAT_RGB888;
+}
+
+/* ── cursor / grab / focus ───────────────────────────────────────── */
+
+typedef struct {
+    unsigned int version, size, width, height, xhot, yhot, delay;
+    unsigned int *pixels;
+} XcursorImageRaw;
+
+static struct {
+    XcursorImageRaw *(*create)(int, int);
+    XCursor          (*load)(XDisplay, const XcursorImageRaw *);
+    void             (*destroy)(XcursorImageRaw *);
+} xcursor;
+
+static bool xcursor_bind(void) {
+    if (xcursor.create) return true;
+    if (!v.lib_xcursor) v.lib_xcursor = dlopen("libXcursor.so.1", RTLD_LAZY | RTLD_LOCAL);
+    if (!v.lib_xcursor) return false;
+    xcursor.create  = (typeof(xcursor.create)) dlsym(v.lib_xcursor, "XcursorImageCreate");
+    xcursor.load    = (typeof(xcursor.load))   dlsym(v.lib_xcursor, "XcursorImageLoadCursor");
+    xcursor.destroy = (typeof(xcursor.destroy))dlsym(v.lib_xcursor, "XcursorImageDestroy");
+    return xcursor.create && xcursor.load && xcursor.destroy;
+}
+
+static const unsigned k_system_cursors[SDL_NUM_SYSTEM_CURSORS] = {
+    [SDL_SYSTEM_CURSOR_ARROW]     = 68,
+    [SDL_SYSTEM_CURSOR_IBEAM]     = 152,
+    [SDL_SYSTEM_CURSOR_WAIT]      = 150,
+    [SDL_SYSTEM_CURSOR_CROSSHAIR] = 34,
+    [SDL_SYSTEM_CURSOR_WAITARROW] = 150,
+    [SDL_SYSTEM_CURSOR_SIZENWSE]  = 134,
+    [SDL_SYSTEM_CURSOR_SIZENESW]  = 136,
+    [SDL_SYSTEM_CURSOR_SIZEWE]    = 108,
+    [SDL_SYSTEM_CURSOR_SIZENS]    = 116,
+    [SDL_SYSTEM_CURSOR_SIZEALL]   = 52,
+    [SDL_SYSTEM_CURSOR_NO]        = 88,
+    [SDL_SYSTEM_CURSOR_HAND]      = 60,
+};
+
+static XCursor cursor_invisible(void) {
+    if (v.invisible || !v.has_x) return v.invisible;
+    static const char blank[8] = {0};
+    XPixmap   pixmap = p_XCreateBitmapFromData(v.dpy, p_XDefaultRootWindow(v.dpy), blank, 8, 8);
+    XColorRaw black  = {0};
+    v.invisible = p_XCreatePixmapCursor(v.dpy, pixmap, pixmap, &black, &black, 0, 0);
+    p_XFreePixmap(v.dpy, pixmap);
+    return v.invisible;
+}
+
+static void cursor_apply(void) {
+    if (!v.has_x || !v.window || !v.window->xwin) return;
+    if (!v.cursor_shown) {
+        p_XDefineCursor(v.dpy, v.window->xwin, cursor_invisible());
+    } else if (v.cursor && v.cursor->xcursor) {
+        p_XDefineCursor(v.dpy, v.window->xwin, v.cursor->xcursor);
+    } else {
+        p_XUndefineCursor(v.dpy, v.window->xwin);
+    }
+    p_XFlush(v.dpy);
+}
+
+SDL_Cursor *SDL_CreateSystemCursor(SDL_SystemCursor id) {
+    if (!video_init()) return NULL;
+    SDL_Cursor *cursor = calloc(1, sizeof(*cursor));
+    if (!cursor) {
+        shim_set_error("out of memory");
+        return NULL;
+    }
+    if (v.has_x && id >= 0 && id < SDL_NUM_SYSTEM_CURSORS) {
+        cursor->xcursor = p_XCreateFontCursor(v.dpy, k_system_cursors[id]);
+        cursor->owned   = cursor->xcursor != X_None;
+    }
+    return cursor;
+}
+
+SDL_Cursor *SDL_CreateColorCursor(SDL_Surface *surface, int hot_x, int hot_y) {
+    if (!video_init()) return NULL;
+    SDL_Cursor *cursor = calloc(1, sizeof(*cursor));
+    if (!cursor) {
+        shim_set_error("out of memory");
+        return NULL;
+    }
+    if (!v.has_x || !surface || !surface->pixels || surface->format->BytesPerPixel != 4
+            || !xcursor_bind()) {
+        return cursor;
+    }
+
+    XcursorImageRaw *image = xcursor.create(surface->w, surface->h);
+    if (!image) return cursor;
+    image->xhot = (unsigned)(hot_x < 0 ? 0 : hot_x);
+    image->yhot = (unsigned)(hot_y < 0 ? 0 : hot_y);
+
+    const SDL_PixelFormat *fmt = surface->format;
+    for (int y = 0; y < surface->h; y++) {
+        const Uint32 *row = (const Uint32 *)((const Uint8 *)surface->pixels + (size_t)y * (size_t)surface->pitch);
+        for (int x = 0; x < surface->w; x++) {
+            Uint32 px = row[x];
+            Uint32 r  = fmt->Rmask ? ((px & fmt->Rmask) >> fmt->Rshift) << fmt->Rloss : 0;
+            Uint32 g  = fmt->Gmask ? ((px & fmt->Gmask) >> fmt->Gshift) << fmt->Gloss : 0;
+            Uint32 b  = fmt->Bmask ? ((px & fmt->Bmask) >> fmt->Bshift) << fmt->Bloss : 0;
+            Uint32 a  = fmt->Amask ? ((px & fmt->Amask) >> fmt->Ashift) << fmt->Aloss : 255;
+            r = r * a / 255;
+            g = g * a / 255;
+            b = b * a / 255;
+            image->pixels[(size_t)y * (size_t)surface->w + (size_t)x] =
+                (a << 24) | (r << 16) | (g << 8) | b;
+        }
+    }
+
+    cursor->xcursor = xcursor.load(v.dpy, image);
+    cursor->owned   = cursor->xcursor != X_None;
+    xcursor.destroy(image);
+    return cursor;
+}
+
+SDL_Cursor *SDL_GetDefaultCursor(void) {
+    return &v.default_cursor;
+}
+
+SDL_Cursor *SDL_GetCursor(void) {
+    return v.cursor ? v.cursor : &v.default_cursor;
+}
+
+void SDL_SetCursor(SDL_Cursor *cursor) {
+    if (cursor) v.cursor = cursor;
+    cursor_apply();
+}
+
+void SDL_FreeCursor(SDL_Cursor *cursor) {
+    if (!cursor || cursor == &v.default_cursor) return;
+    if (v.cursor == cursor) {
+        v.cursor = &v.default_cursor;
+        cursor_apply();
+    }
+    if (cursor->owned && v.has_x) p_XFreeCursor(v.dpy, cursor->xcursor);
+    free(cursor);
+}
+
+int SDL_ShowCursor(int toggle) {
+    int previous = v.cursor_shown ? SDL_ENABLE : SDL_DISABLE;
+    if (toggle < 0) return previous;
+    v.cursor_shown = toggle != SDL_DISABLE;
+    cursor_apply();
+    return previous;
+}
+
+/* Pointer grab only happens when this process owns the keyboard (standalone
+ * mode); under the core the child must not steal the user's pointer. */
+void SDL_SetWindowGrab(SDL_Window *window, SDL_bool grabbed) {
+    if (!window) return;
+    v.grabbed = grabbed == SDL_TRUE;
+    if (grabbed) window->flags |= SDL_WINDOW_INPUT_GRABBED;
+    else         window->flags &= ~(Uint32)SDL_WINDOW_INPUT_GRABBED;
+
+    if (!v.has_x || !window->xwin || !v.x11_keys) return;
+    if (grabbed) {
+        p_XGrabPointer(v.dpy, window->xwin, 1,
+                       X_PointerMotionMask | X_ButtonPressMask | X_ButtonReleaseMask,
+                       X_GrabModeAsync, X_GrabModeAsync, window->xwin, X_None, X_CurrentTime);
+    } else {
+        p_XUngrabPointer(v.dpy, X_CurrentTime);
+    }
+    p_XFlush(v.dpy);
+}
+
+SDL_bool SDL_GetWindowGrab(SDL_Window *window) {
+    if (!window) return SDL_FALSE;
+    return (window->flags & SDL_WINDOW_INPUT_GRABBED) ? SDL_TRUE : SDL_FALSE;
+}
+
+SDL_Window *SDL_GetGrabbedWindow(void) {
+    return v.grabbed ? v.window : NULL;
+}
+
+SDL_Window *SDL_GetKeyboardFocus(void) {
+    if (v.window && (v.window->flags & SDL_WINDOW_INPUT_FOCUS)) return v.window;
+    return NULL;
+}
+
+SDL_Window *SDL_GetMouseFocus(void) {
+    if (v.window && (v.window->flags & SDL_WINDOW_MOUSE_FOCUS)) return v.window;
+    return NULL;
 }
 
 /* ── displays ────────────────────────────────────────────────────── */

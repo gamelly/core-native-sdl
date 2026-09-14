@@ -26,20 +26,51 @@ static bool host_bind(void) {
     return host.control != NULL;
 }
 
+static bool s_debug = false;
+static bool s_pad   = true;
+
 static void on_key(const char *name, bool pressed, int port, void *usr) {
     (void)port; (void)usr;
-    uint16_t scancode;
-    uint32_t keycode;
-    if (keymap_lookup(name, &scancode, &keycode)) {
-        process_send_key(scancode, keycode, pressed);
+
+    /* Pad mode: the shim exposes a virtual SDL gamepad, so the core buttons go
+     * out as pad buttons. Names with no pad slot still fall through to the key
+     * path, which keeps text input working. */
+    if (s_pad) {
+        uint8_t pad = 0;
+        if (padmap_lookup(name, &pad)) {
+            bool sent = process_send_pad(pad, pressed);
+            if (s_debug) {
+                fprintf(stderr, "[sdl2:debug] pad '%s' press=%d sent=%d button=%u\n",
+                        name ? name : "?", pressed, sent, pad);
+            }
+            return;
+        }
+    }
+
+    uint16_t scancode = 0;
+    uint32_t keycode  = 0;
+    bool     mapped   = keymap_lookup(name, &scancode, &keycode);
+    bool     sent     = mapped && process_send_key(scancode, keycode, pressed);
+    if (s_debug) {
+        fprintf(stderr, "[sdl2:debug] key '%s' press=%d mapped=%d sent=%d scancode=%u\n",
+                name ? name : "?", pressed, mapped, sent, scancode);
     }
 }
 
 static void inputs_bind(void) {
     static bool done = false;
-    if (done || !host_bind() || !host.add_cb) return;
-    host.add_cb("@code", (void *)on_key, NULL);
-    done = true;
+    if (done || !host_bind()) return;
+    done    = true;
+    s_debug = getenv("GECND_SDL2_DEBUG") != NULL;
+    if (!host.add_cb) {
+        fprintf(stderr, "[sdl2] input daemon unavailable, keys will not be forwarded\n");
+        return;
+    }
+    if (!host.add_cb("@code", (void *)on_key, NULL)) {
+        fprintf(stderr, "[sdl2] failed to subscribe to input events\n");
+        return;
+    }
+    fprintf(stderr, "[sdl2] input forwarding enabled\n");
 }
 
 static const char *shim_dir(void) {
@@ -72,6 +103,12 @@ static gdmsp_fsm_t sdl2_source(uint8_t channel, const char *url, void *usr) {
     process_stop(true);
     url_env_set(url);
     keymap_configure();
+
+    /* sdl://game.love?input=key falls back to the keyboard path; default is the
+     * virtual gamepad. The shim advertises the pad either way — this only picks
+     * what the core buttons are delivered as. */
+    const char *input = url_env_get("input");
+    s_pad = !(input && (strcmp(input, "key") == 0 || strcmp(input, "keyboard") == 0));
 
     char path[PATH_MAX];
     if (!url_location(url, path, sizeof(path))) {

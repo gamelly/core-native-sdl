@@ -2,192 +2,6 @@
 
 #include <SDL_vulkan.h>
 
-/* ── joystick ────────────────────────────────────────────────────── */
-
-int SDL_NumJoysticks(void) {
-    return 0;
-}
-
-SDL_Joystick *SDL_JoystickOpen(int device_index) {
-    shim_set_error("no joystick %d", device_index);
-    return NULL;
-}
-
-void SDL_JoystickClose(SDL_Joystick *joystick) {
-    (void)joystick;
-}
-
-const char *SDL_JoystickName(SDL_Joystick *joystick) {
-    (void)joystick;
-    return NULL;
-}
-
-const char *SDL_JoystickNameForIndex(int device_index) {
-    (void)device_index;
-    return NULL;
-}
-
-SDL_JoystickID SDL_JoystickInstanceID(SDL_Joystick *joystick) {
-    (void)joystick;
-    return -1;
-}
-
-int SDL_JoystickNumAxes(SDL_Joystick *joystick) {
-    (void)joystick;
-    return 0;
-}
-
-int SDL_JoystickNumButtons(SDL_Joystick *joystick) {
-    (void)joystick;
-    return 0;
-}
-
-int SDL_JoystickNumHats(SDL_Joystick *joystick) {
-    (void)joystick;
-    return 0;
-}
-
-int SDL_JoystickNumBalls(SDL_Joystick *joystick) {
-    (void)joystick;
-    return 0;
-}
-
-Sint16 SDL_JoystickGetAxis(SDL_Joystick *joystick, int axis) {
-    (void)joystick; (void)axis;
-    return 0;
-}
-
-Uint8 SDL_JoystickGetButton(SDL_Joystick *joystick, int button) {
-    (void)joystick; (void)button;
-    return 0;
-}
-
-Uint8 SDL_JoystickGetHat(SDL_Joystick *joystick, int hat) {
-    (void)joystick; (void)hat;
-    return SDL_HAT_CENTERED;
-}
-
-SDL_JoystickPowerLevel SDL_JoystickCurrentPowerLevel(SDL_Joystick *joystick) {
-    (void)joystick;
-    return SDL_JOYSTICK_POWER_UNKNOWN;
-}
-
-SDL_JoystickGUID SDL_JoystickGetGUID(SDL_Joystick *joystick) {
-    (void)joystick;
-    SDL_JoystickGUID guid;
-    memset(&guid, 0, sizeof(guid));
-    return guid;
-}
-
-SDL_JoystickGUID SDL_JoystickGetDeviceGUID(int device_index) {
-    (void)device_index;
-    SDL_JoystickGUID guid;
-    memset(&guid, 0, sizeof(guid));
-    return guid;
-}
-
-void SDL_JoystickGetGUIDString(SDL_JoystickGUID guid, char *pszGUID, int cbGUID) {
-    (void)guid;
-    if (pszGUID && cbGUID > 0) pszGUID[0] = '\0';
-}
-
-SDL_bool SDL_JoystickGetAttached(SDL_Joystick *joystick) {
-    (void)joystick;
-    return SDL_FALSE;
-}
-
-void SDL_JoystickUpdate(void) {
-}
-
-int SDL_JoystickEventState(int state) {
-    (void)state;
-    return SDL_ENABLE;
-}
-
-int SDL_JoystickRumble(SDL_Joystick *joystick, Uint16 low, Uint16 high, Uint32 ms) {
-    (void)joystick; (void)low; (void)high; (void)ms;
-    return -1;
-}
-
-/* ── game controller ─────────────────────────────────────────────── */
-
-SDL_bool SDL_IsGameController(int joystick_index) {
-    (void)joystick_index;
-    return SDL_FALSE;
-}
-
-SDL_GameController *SDL_GameControllerOpen(int joystick_index) {
-    shim_set_error("no game controller %d", joystick_index);
-    return NULL;
-}
-
-void SDL_GameControllerClose(SDL_GameController *gamecontroller) {
-    (void)gamecontroller;
-}
-
-SDL_Joystick *SDL_GameControllerGetJoystick(SDL_GameController *gamecontroller) {
-    (void)gamecontroller;
-    return NULL;
-}
-
-char *SDL_GameControllerMapping(SDL_GameController *gamecontroller) {
-    (void)gamecontroller;
-    return NULL;
-}
-
-char *SDL_GameControllerMappingForGUID(SDL_JoystickGUID guid) {
-    (void)guid;
-    return NULL;
-}
-
-const char *SDL_GameControllerName(SDL_GameController *gamecontroller) {
-    (void)gamecontroller;
-    return NULL;
-}
-
-const char *SDL_GameControllerNameForIndex(int joystick_index) {
-    (void)joystick_index;
-    return NULL;
-}
-
-int SDL_GameControllerRumble(SDL_GameController *gamecontroller, Uint16 low, Uint16 high, Uint32 ms) {
-    (void)gamecontroller; (void)low; (void)high; (void)ms;
-    return -1;
-}
-
-int SDL_GameControllerAddMapping(const char *mappingString) {
-    (void)mappingString;
-    return 0;
-}
-
-int SDL_GameControllerAddMappingsFromRW(SDL_RWops *rw, int freerw) {
-    (void)rw; (void)freerw;
-    return 0;
-}
-
-int SDL_GameControllerEventState(int state) {
-    (void)state;
-    return SDL_ENABLE;
-}
-
-void SDL_GameControllerUpdate(void) {
-}
-
-SDL_bool SDL_GameControllerGetAttached(SDL_GameController *gamecontroller) {
-    (void)gamecontroller;
-    return SDL_FALSE;
-}
-
-Sint16 SDL_GameControllerGetAxis(SDL_GameController *gamecontroller, SDL_GameControllerAxis axis) {
-    (void)gamecontroller; (void)axis;
-    return 0;
-}
-
-Uint8 SDL_GameControllerGetButton(SDL_GameController *gamecontroller, SDL_GameControllerButton button) {
-    (void)gamecontroller; (void)button;
-    return 0;
-}
-
 /* ── haptic ──────────────────────────────────────────────────────── */
 
 int SDL_NumHaptics(void) {
@@ -329,4 +143,155 @@ SDL_bool SDL_Vulkan_CreateSurface(SDL_Window *window, VkInstance instance, VkSur
 
 void SDL_Vulkan_GetDrawableSize(SDL_Window *window, int *w, int *h) {
     SDL_GL_GetDrawableSize(window, w, h);
+}
+
+/* ── joystick identity ───────────────────────────────────────────── */
+
+Uint16 SDL_JoystickGetVendor(SDL_Joystick *joystick) {
+    (void)joystick;
+    return 0;
+}
+
+Uint16 SDL_JoystickGetProduct(SDL_Joystick *joystick) {
+    (void)joystick;
+    return 0;
+}
+
+Uint16 SDL_JoystickGetProductVersion(SDL_Joystick *joystick) {
+    (void)joystick;
+    return 0;
+}
+
+SDL_bool SDL_JoystickHasRumble(SDL_Joystick *joystick) {
+    (void)joystick;
+    return SDL_FALSE;
+}
+
+SDL_JoystickGUID SDL_JoystickGetGUIDFromString(const char *pchGUID) {
+    SDL_JoystickGUID guid;
+    memset(&guid, 0, sizeof(guid));
+    if (!pchGUID) return guid;
+
+    for (size_t i = 0; i < sizeof(guid.data) && pchGUID[i * 2] && pchGUID[i * 2 + 1]; i++) {
+        char byte[3] = { pchGUID[i * 2], pchGUID[i * 2 + 1], '\0' };
+        guid.data[i] = (Uint8)strtoul(byte, NULL, 16);
+    }
+    return guid;
+}
+
+/* ── game controller mapping names ───────────────────────────────── */
+
+static const char *const k_axis_names[SDL_CONTROLLER_AXIS_MAX] = {
+    "leftx", "lefty", "rightx", "righty", "lefttrigger", "righttrigger",
+};
+
+static const char *const k_button_names[SDL_CONTROLLER_BUTTON_MAX] = {
+    "a", "b", "x", "y", "back", "guide", "start",
+    "leftstick", "rightstick", "leftshoulder", "rightshoulder",
+    "dpup", "dpdown", "dpleft", "dpright",
+    "misc1", "paddle1", "paddle2", "paddle3", "paddle4", "touchpad",
+};
+
+const char *SDL_GameControllerGetStringForAxis(SDL_GameControllerAxis axis) {
+    if (axis < 0 || axis >= SDL_CONTROLLER_AXIS_MAX) return NULL;
+    return k_axis_names[axis];
+}
+
+const char *SDL_GameControllerGetStringForButton(SDL_GameControllerButton button) {
+    if (button < 0 || button >= SDL_CONTROLLER_BUTTON_MAX) return NULL;
+    return k_button_names[button];
+}
+
+SDL_GameControllerButtonBind SDL_GameControllerGetBindForAxis(SDL_GameController *gamecontroller,
+                                                              SDL_GameControllerAxis axis) {
+    (void)gamecontroller; (void)axis;
+    SDL_GameControllerButtonBind bind;
+    memset(&bind, 0, sizeof(bind));
+    bind.bindType = SDL_CONTROLLER_BINDTYPE_NONE;
+    return bind;
+}
+
+SDL_GameControllerButtonBind SDL_GameControllerGetBindForButton(SDL_GameController *gamecontroller,
+                                                                SDL_GameControllerButton button) {
+    (void)gamecontroller; (void)button;
+    SDL_GameControllerButtonBind bind;
+    memset(&bind, 0, sizeof(bind));
+    bind.bindType = SDL_CONTROLLER_BINDTYPE_NONE;
+    return bind;
+}
+
+/* ── haptic effects ──────────────────────────────────────────────── */
+
+unsigned int SDL_HapticQuery(SDL_Haptic *haptic) {
+    (void)haptic;
+    return 0;
+}
+
+int SDL_HapticIndex(SDL_Haptic *haptic) {
+    (void)haptic;
+    return -1;
+}
+
+int SDL_HapticNumAxes(SDL_Haptic *haptic) {
+    (void)haptic;
+    return -1;
+}
+
+int SDL_HapticNumEffects(SDL_Haptic *haptic) {
+    (void)haptic;
+    return -1;
+}
+
+int SDL_HapticNumEffectsPlaying(SDL_Haptic *haptic) {
+    (void)haptic;
+    return -1;
+}
+
+int SDL_HapticEffectSupported(SDL_Haptic *haptic, SDL_HapticEffect *effect) {
+    (void)haptic; (void)effect;
+    return SDL_FALSE;
+}
+
+int SDL_HapticNewEffect(SDL_Haptic *haptic, SDL_HapticEffect *effect) {
+    (void)haptic; (void)effect;
+    return SDL_SetError("haptic not available");
+}
+
+int SDL_HapticUpdateEffect(SDL_Haptic *haptic, int effect, SDL_HapticEffect *data) {
+    (void)haptic; (void)effect; (void)data;
+    return SDL_SetError("haptic not available");
+}
+
+int SDL_HapticRunEffect(SDL_Haptic *haptic, int effect, Uint32 iterations) {
+    (void)haptic; (void)effect; (void)iterations;
+    return SDL_SetError("haptic not available");
+}
+
+int SDL_HapticStopEffect(SDL_Haptic *haptic, int effect) {
+    (void)haptic; (void)effect;
+    return SDL_SetError("haptic not available");
+}
+
+void SDL_HapticDestroyEffect(SDL_Haptic *haptic, int effect) {
+    (void)haptic; (void)effect;
+}
+
+int SDL_HapticGetEffectStatus(SDL_Haptic *haptic, int effect) {
+    (void)haptic; (void)effect;
+    return SDL_SetError("haptic not available");
+}
+
+int SDL_HapticStopAll(SDL_Haptic *haptic) {
+    (void)haptic;
+    return SDL_SetError("haptic not available");
+}
+
+int SDL_HapticPause(SDL_Haptic *haptic) {
+    (void)haptic;
+    return SDL_SetError("haptic not available");
+}
+
+int SDL_HapticUnpause(SDL_Haptic *haptic) {
+    (void)haptic;
+    return SDL_SetError("haptic not available");
 }

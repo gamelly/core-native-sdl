@@ -10,7 +10,6 @@ static Uint32   s_inited;
 static uint64_t s_start_ms;
 static char    *s_clipboard;
 static SDL_bool s_text_input;
-static int      s_cursor_shown = 1;
 
 uint64_t shim_now_ms(void) {
     struct timespec ts;
@@ -239,11 +238,6 @@ SDL_bool SDL_IsScreenKeyboardShown(SDL_Window *window) {
 }
 
 /* ── mouse ───────────────────────────────────────────────────────── */
-
-int SDL_ShowCursor(int toggle) {
-    if (toggle >= 0) s_cursor_shown = toggle ? 1 : 0;
-    return s_cursor_shown;
-}
 
 int SDL_WarpMouseGlobal(int x, int y) {
     (void)x; (void)y;

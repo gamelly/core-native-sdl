@@ -7,6 +7,7 @@
 #include <SDL_keycode.h>
 
 #include "main.h"
+#include "ipc.h"
 
 typedef struct {
     const char *name;
@@ -108,6 +109,39 @@ void keymap_configure(void) {
         if (!want || !want[0]) want = s_map[i].def;
         s_map[i].valid = key_resolve(want, &s_map[i].scancode, &s_map[i].keycode);
     }
+}
+
+/* ── pad ─────────────────────────────────────────────────────────── */
+
+typedef struct {
+    const char *core;
+    uint8_t     pad;
+} pad_map_t;
+
+/* Fixed: the shim owns both ends of this, so the core button IS the pad
+ * button. Direction keys become the hat, the rest become b0..b6. */
+static const pad_map_t k_pad[] = {
+    { "up",    GECND_SDL2_PAD_UP    },
+    { "down",  GECND_SDL2_PAD_DOWN  },
+    { "left",  GECND_SDL2_PAD_LEFT  },
+    { "right", GECND_SDL2_PAD_RIGHT },
+    { "a",     GECND_SDL2_PAD_A     },
+    { "b",     GECND_SDL2_PAD_B     },
+    { "c",     GECND_SDL2_PAD_C     },
+    { "d",     GECND_SDL2_PAD_D     },
+    { "e",     GECND_SDL2_PAD_E     },
+    { "f",     GECND_SDL2_PAD_F     },
+    { "menu",  GECND_SDL2_PAD_MENU  },
+};
+
+bool padmap_lookup(const char *name, uint8_t *pad) {
+    if (!name) return false;
+    for (size_t i = 0; i < sizeof(k_pad) / sizeof(*k_pad); i++) {
+        if (strcmp(k_pad[i].core, name) != 0) continue;
+        *pad = k_pad[i].pad;
+        return true;
+    }
+    return false;
 }
 
 bool keymap_lookup(const char *name, uint16_t *scancode, uint32_t *keycode) {

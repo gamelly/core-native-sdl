@@ -376,6 +376,11 @@ bool process_send_key(uint16_t scancode, uint32_t keycode, bool pressed) {
     return send_pkt(GECND_SDL2_PKT_KEY, pressed ? 1 : 0, scancode, keycode);
 }
 
+bool process_send_pad(uint8_t pad, bool pressed) {
+    if (s.phase != PROC_CONNECTED) return false;
+    return send_pkt(GECND_SDL2_PKT_PAD, pressed ? 1 : 0, pad, 0);
+}
+
 bool process_is_running(void) {
     return s.phase == PROC_CONNECTED;
 }

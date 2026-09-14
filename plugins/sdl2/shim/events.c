@@ -31,6 +31,7 @@ void shim_events_init(void) {
 
 void shim_events_quit(void) {
     shim_events_init();
+    shim_joystick_quit();
 }
 
 void shim_events_push(const SDL_Event *ev) {
@@ -168,7 +169,18 @@ void shim_ipc_pump(void) {
         if (n == (ssize_t)sizeof(pkt)) {
             switch (pkt.type) {
                 case GECND_SDL2_PKT_KEY:
+                    if (getenv(GECND_SDL2_ENV_DEBUG)) {
+                        fprintf(stderr, "[libSDL2-shim] key scancode=%u sym=%u press=%u\n",
+                                pkt.code, pkt.arg, pkt.flag);
+                    }
                     shim_events_key(pkt.code, pkt.arg, pkt.flag != 0);
+                    break;
+                case GECND_SDL2_PKT_PAD:
+                    if (getenv(GECND_SDL2_ENV_DEBUG)) {
+                        fprintf(stderr, "[libSDL2-shim] pad button=%u press=%u\n",
+                                pkt.code, pkt.flag);
+                    }
+                    shim_joystick_input((uint8_t)pkt.code, pkt.flag != 0);
                     break;
                 case GECND_SDL2_PKT_QUIT:
                     events_quit_request();
@@ -186,6 +198,9 @@ void shim_ipc_pump(void) {
 }
 
 void shim_events_pump(void) {
+    /* Queue the pad's device-added events on the first pump, so the client has
+     * it listed before any button arrives. Cheap after the first call. */
+    shim_joystick_announce();
     shim_video_pump();
     shim_ipc_pump();
 }
@@ -222,13 +237,36 @@ int SDL_PushEvent(SDL_Event *event) {
     return 1;
 }
 
-int SDL_PeepEvents(SDL_Event *events, int numevents, SDL_eventaction action, Uint32 minType, Uint32 maxType) {
-    (void)minType; (void)maxType;
+int SDL_PeepEvents(SDL_Event *events, int numevents, SDL_eventaction action,
+                   Uint32 minType, Uint32 maxType) {
+    if (!events || numevents <= 0) return 0;
+
     if (action == SDL_ADDEVENT) {
         for (int i = 0; i < numevents; i++) shim_events_push(&events[i]);
         return numevents;
     }
-    return 0;
+
+    SDL_Event kept[QUEUE_CAP];
+    int       taken = 0;
+    int       n     = 0;
+
+    pthread_mutex_lock(&s_lock);
+    while (s_tail != s_head) {
+        SDL_Event ev = s_queue[s_tail];
+        s_tail = (s_tail + 1) % QUEUE_CAP;
+
+        bool match = ev.type >= minType && ev.type <= maxType && taken < numevents;
+        if (match) {
+            events[taken++] = ev;
+            if (action == SDL_GETEVENT) continue;   /* consumed */
+        }
+        kept[n++] = ev;
+    }
+    s_head = s_tail = 0;
+    for (int i = 0; i < n; i++) s_queue[s_head++] = kept[i];
+    pthread_mutex_unlock(&s_lock);
+
+    return taken;
 }
 
 static void events_filter(Uint32 minType, Uint32 maxType) {
