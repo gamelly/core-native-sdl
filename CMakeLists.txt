@@ -48,7 +48,6 @@ option(GECND_USE_SQLITE3 "fetch and build sqlite3" ON)
 option(GECND_USE_LIBUV "fetch and build libuv" ON)
 option(GECND_USE_ZLIB "fetch and build zlib" ON)
 option(GECND_USE_PLUGIN_LIBRETRO "build plugin libretro for core native" OFF)
-option(GECND_USE_PLUGIN_SDL2 "build plugin sdl2 (process launcher + libSDL2 ipc shim)" OFF)
 
 # EXE
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
@@ -181,52 +180,6 @@ if(GECND_USE_PLUGIN_LIBRETRO)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
         ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     )
-endif()
-
-if(GECND_USE_PLUGIN_SDL2)
-    if (NOT EXISTS "${SDL2_DIR}/include")
-        FetchContent_Populate(sdl2 URL ${SDL2_DOWNLOAD} SOURCE_DIR ${SDL2_DIR})
-    endif()
-    file(GLOB sdl2_plugin_files "${CMAKE_CURRENT_LIST_DIR}/plugins/sdl2/*.c")
-    add_library(sdl2_gecnd SHARED "${sdl2_plugin_files}")
-    target_include_directories(sdl2_gecnd SYSTEM PRIVATE "${SDL2_DIR}/include")
-    target_link_libraries(sdl2_gecnd PRIVATE gecnd_header ${CMAKE_DL_LIBS})
-    set_target_properties(sdl2_gecnd PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    )
-
-    file(GLOB sdl2_shim_files "${CMAKE_CURRENT_LIST_DIR}/plugins/sdl2/shim/*.c")
-    add_library(sdl2_shim SHARED "${sdl2_shim_files}")
-    target_include_directories(sdl2_shim SYSTEM PRIVATE "${SDL2_DIR}/include" "${SDL2_DIR}/src/video/khronos")
-    target_compile_definitions(sdl2_shim PRIVATE EGL_NO_X11)
-    target_compile_options(sdl2_shim PRIVATE -Wall -Wextra)
-    target_link_libraries(sdl2_shim PRIVATE ${CMAKE_DL_LIBS} pthread)
-    set_target_properties(sdl2_shim PROPERTIES
-        OUTPUT_NAME "SDL2-2.0"
-        SUFFIX ".so.0"
-        LINK_FLAGS "-Wl,-soname,libSDL2-2.0.so.0"
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    )
-    # libjack.so.0 falso: ocupa o soname para o openal-soft escolher o backend
-    # jack e entregar o PCM ao shim, que repassa ao core. Lista explicita em vez
-    # de GLOB: arquivo novo aqui nao exige reconfigurar.
-    add_library(jack_shim SHARED "${CMAKE_CURRENT_LIST_DIR}/plugins/sdl2/jack/jack.c")
-    target_compile_options(jack_shim PRIVATE -Wall -Wextra)
-    target_link_libraries(jack_shim PRIVATE ${CMAKE_DL_LIBS} pthread)
-    set_target_properties(jack_shim PROPERTIES
-        OUTPUT_NAME "jack"
-        SUFFIX ".so.0"
-        LINK_FLAGS "-Wl,-soname,libjack.so.0"
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    )
-
-    add_dependencies(sdl2_gecnd sdl2_shim jack_shim)
 endif()
 
 # TODO: use custom command with output
