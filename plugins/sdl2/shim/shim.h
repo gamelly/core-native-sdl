@@ -24,6 +24,10 @@ void     shim_events_pump(void);
 void     shim_ipc_connect(void);
 void     shim_ipc_close(void);
 void     shim_ipc_send(uint8_t type, uint8_t flag, uint16_t code, uint32_t arg);
+/* Exportada de proposito: o libjack falso nao linka com o shim, alcanca esta
+ * por dlsym(RTLD_DEFAULT, ...) e reusa o socket ja aberto. */
+void     shim_ipc_send_blob(uint8_t type, uint8_t flag, uint16_t code, uint32_t arg,
+                            const void *payload, size_t bytes);
 void     shim_ipc_pump(void);
 
 void     shim_joystick_announce(void);

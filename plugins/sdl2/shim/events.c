@@ -143,6 +143,22 @@ void shim_ipc_send(uint8_t type, uint8_t flag, uint16_t code, uint32_t arg) {
     send(s_ipc_fd, &pkt, sizeof(pkt), MSG_NOSIGNAL | MSG_DONTWAIT);
 }
 
+void shim_ipc_send_blob(uint8_t type, uint8_t flag, uint16_t code, uint32_t arg,
+                        const void *payload, size_t bytes) {
+    if (s_ipc_fd < 0) return;
+    if (bytes > GECND_SDL2_PKT_MAX - sizeof(gecnd_sdl2_pkt_t)) return;
+
+    /* Uma unica send() por mensagem: SOCK_SEQPACKET e' atomico por datagrama,
+     * entao a thread de audio e a principal podem escrever sem lock e sem
+     * risco de intercalar bytes. MSG_DONTWAIT faz o bloco ser descartado se o
+     * host estiver atrasado, em vez de travar o audio. */
+    uint8_t buf[GECND_SDL2_PKT_MAX];
+    gecnd_sdl2_pkt_t pkt = { type, flag, code, arg };
+    memcpy(buf, &pkt, sizeof(pkt));
+    if (bytes && payload) memcpy(buf + sizeof(pkt), payload, bytes);
+    send(s_ipc_fd, buf, sizeof(pkt) + bytes, MSG_NOSIGNAL | MSG_DONTWAIT);
+}
+
 void shim_ipc_close(void) {
     if (s_ipc_fd < 0) return;
     shim_ipc_send(GECND_SDL2_PKT_BYE, 0, 0, 0);

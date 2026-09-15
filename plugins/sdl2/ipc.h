@@ -18,6 +18,13 @@ typedef enum __attribute__((packed)) {
     GECND_SDL2_PKT_QUIT,
     GECND_SDL2_PKT_WINDOW,
     GECND_SDL2_PKT_PAD,   /* flag = pressed, code = gecnd_sdl2_pad_t */
+
+    /* Audio, sempre do filho para o host. AUDIO carrega payload depois do
+     * cabecalho, entao o leitor do host le tamanho variavel; os outros dois
+     * cabem no pacote fixo. */
+    GECND_SDL2_PKT_AUDIO_CFG,   /* code = canais, arg = taxa em Hz     */
+    GECND_SDL2_PKT_AUDIO,       /* flag = canais, code = frames, payload S16 */
+    GECND_SDL2_PKT_AUDIO_STOP,
 } gecnd_sdl2_pkt_type_t;
 
 /* Virtual pad exposed by the shim. The first seven entries are SDL joystick
@@ -50,5 +57,14 @@ typedef struct {
     uint16_t code;
     uint32_t arg;
 } gecnd_sdl2_pkt_t;
+
+#define GECND_SDL2_AUDIO_MAX_CHANNELS 2
+#define GECND_SDL2_AUDIO_MAX_FRAMES   2048
+#define GECND_SDL2_AUDIO_MAX_BYTES \
+    (GECND_SDL2_AUDIO_MAX_FRAMES * GECND_SDL2_AUDIO_MAX_CHANNELS * 2)
+
+/* maior mensagem que trafega no socket: cabecalho + um bloco de audio */
+#define GECND_SDL2_PKT_MAX \
+    (sizeof(gecnd_sdl2_pkt_t) + GECND_SDL2_AUDIO_MAX_BYTES)
 
 #endif

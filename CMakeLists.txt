@@ -211,7 +211,22 @@ if(GECND_USE_PLUGIN_SDL2)
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
         ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     )
-    add_dependencies(sdl2_gecnd sdl2_shim)
+    # libjack.so.0 falso: ocupa o soname para o openal-soft escolher o backend
+    # jack e entregar o PCM ao shim, que repassa ao core. Lista explicita em vez
+    # de GLOB: arquivo novo aqui nao exige reconfigurar.
+    add_library(jack_shim SHARED "${CMAKE_CURRENT_LIST_DIR}/plugins/sdl2/jack/jack.c")
+    target_compile_options(jack_shim PRIVATE -Wall -Wextra)
+    target_link_libraries(jack_shim PRIVATE ${CMAKE_DL_LIBS} pthread)
+    set_target_properties(jack_shim PROPERTIES
+        OUTPUT_NAME "jack"
+        SUFFIX ".so.0"
+        LINK_FLAGS "-Wl,-soname,libjack.so.0"
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    )
+
+    add_dependencies(sdl2_gecnd sdl2_shim jack_shim)
 endif()
 
 # TODO: use custom command with output

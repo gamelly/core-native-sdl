@@ -115,10 +115,18 @@ static void accept_client(void) {
 
 static void read_packets(void) {
     if (s.client_fd < 0) return;
-    gecnd_sdl2_pkt_t pkt;
+    /* Mensagens de audio levam payload depois do cabecalho, entao o buffer e'
+     * do tamanho da maior mensagem possivel. SOCK_SEQPACKET preserva limite de
+     * mensagem: um recv = um pacote, e o tamanho lido diz quanto payload veio.
+     * Ler com sizeof(pkt) truncaria o audio silenciosamente. */
+    static uint8_t buf[GECND_SDL2_PKT_MAX];
     for (;;) {
-        ssize_t n = recv(s.client_fd, &pkt, sizeof(pkt), MSG_DONTWAIT);
-        if (n == (ssize_t)sizeof(pkt)) {
+        ssize_t n = recv(s.client_fd, buf, sizeof(buf), MSG_DONTWAIT);
+        if (n >= (ssize_t)sizeof(gecnd_sdl2_pkt_t)) {
+            gecnd_sdl2_pkt_t pkt;
+            memcpy(&pkt, buf, sizeof(pkt));
+            const uint8_t *payload = buf + sizeof(pkt);
+            size_t         paylen  = (size_t)n - sizeof(pkt);
             switch (pkt.type) {
                 case GECND_SDL2_PKT_HELLO:
                     if (s.phase == PROC_SPAWNED) {
@@ -134,7 +142,21 @@ static void read_packets(void) {
                     s.win_w = pkt.code;
                     s.win_h = (uint16_t)pkt.arg;
                     break;
+                case GECND_SDL2_PKT_AUDIO_CFG:
+                    audio_configure(pkt.arg, pkt.code);
+                    break;
+                case GECND_SDL2_PKT_AUDIO: {
+                    size_t want = (size_t)pkt.code * pkt.flag * sizeof(int16_t);
+                    if (pkt.flag && want && want <= paylen) {
+                        audio_push((const int16_t *)(const void *)payload, pkt.code);
+                    }
+                    break;
+                }
+                case GECND_SDL2_PKT_AUDIO_STOP:
+                    audio_stop();
+                    break;
                 case GECND_SDL2_PKT_BYE:
+                    audio_reset();
                     close(s.client_fd);
                     s.client_fd = -1;
                     return;
