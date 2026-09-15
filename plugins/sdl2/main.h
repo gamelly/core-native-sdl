@@ -8,6 +8,7 @@ extern gecnd_api_t *api;
 
 void        url_env_set(const char *url);
 const char *url_env_get(const char *key);
+void        url_resolve_rel(const char *given, const char *base_file, char *out, size_t cap);
 
 /* Por padrao todo botao do core sai como gamepad virtual. Um arquivo .gptk
  * (?gptk=...) desvia para teclado os botoes que ele lista; os ausentes seguem

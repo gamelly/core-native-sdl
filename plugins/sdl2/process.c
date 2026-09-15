@@ -42,6 +42,9 @@ static struct {
     uint64_t     deadline_ms;
     char         sock_path[108];
     char         exec_path[PATH_MAX];
+    char         bin_path[PATH_MAX];   /* ?bin=  vazio = executa exec_path direto */
+    bool         bin_on_path;          /* ?bin= sem '/': procurar no PATH        */
+    char         ld_extra[PATH_MAX];   /* ?ld=   entradas ja' resolvidas         */
     char         shim_path[PATH_MAX];
     char         error[256];
 } s = { .listen_fd = -1, .client_fd = -1, .preload = true };
@@ -222,7 +225,15 @@ static char **env_build(void) {
     char *slash = strrchr(shim_dir, '/');
     if (slash) *slash = '\0';
 
-    env[n++] = env_join("LD_LIBRARY_PATH", shim_dir, old_ld_path);
+    /* Ordem: shim primeiro (tem que ganhar de libSDL2/libjack reais), depois o
+     * ?ld= do usuario, depois o que ja' existia. */
+    if (s.ld_extra[0]) {
+        char head[PATH_MAX * 2];
+        snprintf(head, sizeof(head), "%s:%s", shim_dir, s.ld_extra);
+        env[n++] = env_join("LD_LIBRARY_PATH", head, old_ld_path);
+    } else {
+        env[n++] = env_join("LD_LIBRARY_PATH", shim_dir, old_ld_path);
+    }
     if (s.preload) {
         env[n++] = env_join("LD_PRELOAD", s.shim_path, old_preload);
     } else if (old_preload) {
@@ -249,9 +260,12 @@ static bool spawn(void) {
         return false;
     }
 
-    bool  executable   = access(s.exec_path, X_OK) == 0;
+    bool  executable    = access(s.exec_path, X_OK) == 0;
     char *argv_direct[] = { s.exec_path, NULL };
     char *argv_shell[]  = { "/bin/sh", s.exec_path, NULL };
+    /* com ?bin=, o alvo da URL vira ARGUMENTO do binario, nao o executavel:
+     * sdl:///jogo.love?bin=./love  ->  ./love /caminho/jogo.love */
+    char *argv_bin[]    = { s.bin_path, s.exec_path, NULL };
 
     pid_t pid = fork();
     if (pid < 0) {
@@ -262,6 +276,11 @@ static bool spawn(void) {
     }
     if (pid == 0) {
         setpgid(0, 0);
+        if (s.bin_path[0]) {
+            if (s.bin_on_path) execvpe(s.bin_path, argv_bin, env);
+            else               execve(s.bin_path, argv_bin, env);
+            _exit(127);
+        }
         if (executable) execve(s.exec_path, argv_direct, env);
         execve("/bin/sh", argv_shell, env);
         _exit(127);
@@ -324,6 +343,57 @@ bool process_request(const char *path, const char *shim_dir) {
 
     const char *preload = url_env_get("preload");
     s.preload = !(preload && (preload[0] == '0' || preload[0] == 'n' || preload[0] == 'f'));
+
+    /* ?bin= : quem executa. Sem ele, o alvo da URL e' o executavel (ou vai para
+     * o /bin/sh). Com ele, o alvo vira argumento — e' o que dispensa o wrapper
+     * .sh de uma linha:  sdl:///jogo.love?bin=./love  */
+    s.bin_path[0]  = '\0';
+    s.bin_on_path  = false;
+    const char *bin = url_env_get("bin");
+    if (bin && bin[0]) {
+        if (!strchr(bin, '/')) {
+            /* sem barra: nome de comando, deixa o PATH resolver no execvpe */
+            snprintf(s.bin_path, sizeof(s.bin_path), "%s", bin);
+            s.bin_on_path = true;
+        } else {
+            url_resolve_rel(bin, path, s.bin_path, sizeof(s.bin_path));
+            if (access(s.bin_path, X_OK) != 0) {
+                process_set_error("bin not executable: %s", s.bin_path);
+                return false;
+            }
+        }
+    }
+
+    /* ?ld= : entradas extras de LD_LIBRARY_PATH, ':' separando. Ficam DEPOIS do
+     * diretorio do shim (que precisa ganhar do libSDL2/libjack reais) e ANTES
+     * do LD_LIBRARY_PATH que ja' existia. Relativo resolve contra a pasta do
+     * alvo, igual ?bin= e ?gptk=. */
+    s.ld_extra[0] = '\0';
+    const char *ld = url_env_get("ld");
+    if (ld && ld[0]) {
+        char   list[PATH_MAX];
+        size_t used = 0;
+        snprintf(list, sizeof(list), "%s", ld);
+
+        for (char *tok = strtok(list, ":"); tok; tok = strtok(NULL, ":")) {
+            if (!tok[0]) continue;
+            char one[PATH_MAX];
+            url_resolve_rel(tok, path, one, sizeof(one));
+
+            int w = snprintf(s.ld_extra + used, sizeof(s.ld_extra) - used,
+                             "%s%s", used ? ":" : "", one);
+            if (w < 0 || (size_t)w >= sizeof(s.ld_extra) - used) {
+                process_set_error("ld path too long");
+                return false;
+            }
+            used += (size_t)w;
+
+            struct stat lst;
+            if (stat(one, &lst) != 0) {
+                fprintf(stderr, "[sdl2] warning: ld path does not exist: %s\n", one);
+            }
+        }
+    }
 
     snprintf(s.exec_path, sizeof(s.exec_path), "%s", path);
     s.win_w = s.win_h = 0;

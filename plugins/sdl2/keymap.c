@@ -288,26 +288,6 @@ static bool gptk_load(const char *path) {
     return true;
 }
 
-/* Caminho relativo e' relativo a' pasta do executavel lancado, nao ao cwd do
- * host: quem escreve a URL pensa em termos da pasta do jogo. */
-static void gptk_resolve(const char *given, const char *exec_path,
-                         char *out, size_t cap) {
-    if (given[0] == '/' || !exec_path || !exec_path[0]) {
-        snprintf(out, cap, "%s", given);
-        return;
-    }
-
-    char base[1024];
-    snprintf(base, sizeof(base), "%s", exec_path);
-    char *slash = strrchr(base, '/');
-    if (!slash) {
-        snprintf(out, cap, "%s", given);
-        return;
-    }
-    *slash = '\0';
-    snprintf(out, cap, "%s/%s", base, given);
-}
-
 /* ── api ─────────────────────────────────────────────────────────── */
 
 void keymap_configure(const char *exec_path) {
@@ -321,7 +301,7 @@ void keymap_configure(const char *exec_path) {
     const char *gptk = url_env_get("gptk");
     if (gptk && gptk[0]) {
         char path[1024];
-        gptk_resolve(gptk, exec_path, path, sizeof(path));
+        url_resolve_rel(gptk, exec_path, path, sizeof(path));
         if (gptk_load(path)) {
             fprintf(stderr, "[sdl2] gptk loaded: %s\n", path);
         }

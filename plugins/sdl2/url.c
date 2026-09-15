@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,4 +58,29 @@ const char *url_env_get(const char *key) {
         return ctx.result.ptr;
     }
     return NULL;
+}
+
+/* Resolve `given` contra a PASTA de `base_file`, nao contra o cwd do host:
+ * quem escreve a URL pensa em termos da pasta do jogo. Caminho absoluto passa
+ * intacto. Usado por ?gptk=, ?bin= e ?ld=. */
+void url_resolve_rel(const char *given, const char *base_file, char *out, size_t cap) {
+    if (!given || !out || cap == 0) return;
+
+    if (given[0] == '/' || !base_file || !base_file[0]) {
+        snprintf(out, cap, "%s", given);
+        return;
+    }
+
+    char base[1024];
+    snprintf(base, sizeof(base), "%s", base_file);
+    char *slash = strrchr(base, '/');
+    if (!slash) {
+        snprintf(out, cap, "%s", given);
+        return;
+    }
+    *slash = '\0';
+
+    /* "./x" e "x" dao no mesmo; comer o "./" mantem o caminho legivel no log */
+    if (given[0] == '.' && given[1] == '/') given += 2;
+    snprintf(out, cap, "%s/%s", base, given);
 }
